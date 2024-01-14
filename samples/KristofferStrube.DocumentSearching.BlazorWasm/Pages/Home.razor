@@ -52,7 +52,7 @@
 
     protected override async Task OnInitializedAsync()
     {
-        Stream periodicTableCsv = await HttpClient.GetStreamAsync("/data/periodic-table-detailed.csv");
+        Stream periodicTableCsv = await HttpClient.GetStreamAsync("data/periodic-table-detailed.csv");
         using StreamReader streamReader = new StreamReader(periodicTableCsv);
 
         using var csv = new CsvReader(streamReader, CultureInfo.InvariantCulture);
