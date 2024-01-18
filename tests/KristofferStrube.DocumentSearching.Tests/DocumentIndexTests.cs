@@ -44,10 +44,10 @@ public class DocumentIndexTests
 
         // Assert
         results.Should().HaveCount(2);
-        results[0].Element.id.Should().Be(1);
-        results[0].Matches.Single().Should().Be(32);
-        results[1].Element.id.Should().Be(2);
-        results[1].Matches.Single().Should().Be(4);
+        results[0].Element.id.Should().Be(2);
+        results[0].Matches.Single().Should().Be(4);
+        results[1].Element.id.Should().Be(1);
+        results[1].Matches.Single().Should().Be(32);
     }
 
     [Fact]

@@ -1,4 +1,6 @@
-﻿namespace KristofferStrube.DocumentSearching.SuffixTree;
+﻿using KristofferStrube.DocumentSearching.SearchTree;
+
+namespace KristofferStrube.DocumentSearching.SuffixTree;
 
 public class Node
 {

@@ -1,4 +1,6 @@
-﻿namespace KristofferStrube.DocumentSearching.SearchTree;
+﻿using System.Reflection;
+
+namespace KristofferStrube.DocumentSearching.SearchTree;
 
 public class Alphabet
 {

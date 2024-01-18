@@ -135,7 +135,7 @@ public class SuffixTreeSearchIndex : ISearchIndex
             }
             else
             {
-                for (int i = _alphabet.Size - 1; i >= 0; i--)
+                for (int i = 0; i < _alphabet.Size; i++)
                 {
                     if (currentNode.Children.Length > i && currentNode.Children[i] is { } existingChild)
                     {
