@@ -83,10 +83,11 @@ public class DocumentIndexTests
         // Act
         var documentIndex = DocumentIndex<(int id, string content), SuffixTreeSearchIndex>.Create(elements, c => c.content);
 
-        var results = documentIndex.ExactSearch("helium");
+        var results = documentIndex.ExactSearch("chemical element with symbol he");
 
         // Assert
         results.Should().HaveCount(1);
         results.Single().Element.id.Should().Be(2);
+        results.Single().Matches.Single().Should().Be(12);
     }
 }

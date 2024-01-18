@@ -82,9 +82,9 @@ public class DocumentIndex<TElement, TSearchIndex> where TSearchIndex : ISearchI
         SearchResult<TElement>[] matchingElements = new SearchResult<TElement>[buckets.Count];
 
         int k = 0;
-        foreach (int key in buckets.Keys)
+        foreach (int key in buckets.Keys.OrderByDescending(k => buckets[k].Count))
         {
-            matchingElements[k] = new(_elements[key], buckets[key].ToArray());
+            matchingElements[k] = new(_elements[key], buckets[key].Order().ToArray());
             k++;
         }
 

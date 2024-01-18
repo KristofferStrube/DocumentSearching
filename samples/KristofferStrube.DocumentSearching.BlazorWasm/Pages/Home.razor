@@ -12,14 +12,7 @@
 <h1>Search</h1>
 <p>
     Here you can search through all the elements in the periodic table using an in-memory search index.<br />
-    @if(index is null)
-    {
-        <small>The index is currently being built (@indexingProgress / @(elements?.Length-1)).</small>
-    }
-    else
-    {
-        <small>Try seaching "Hydrogen".</small>
-    }
+    <small>Try seaching "Hydrogen".</small>
 </p>
 @if (index is null)
 {
@@ -29,15 +22,38 @@
 <br />
 @if (searchTime is not null && naive is not null)
 {
-    <p>Found @searchResults.Length @(searchResults.Length is 1 ? "element" : "elements") in @($"{searchTime.Value:0.0}") ms compared to a naive Regex search in @($"{naive.Value:0.0}") ms.</p>
+    <p>Found @searchResults.Length @(searchResults.Length is 1 ? "element" : "elements") in @Math.Round(searchTime.Value, 2) ms compared to a naive Regex search in @Math.Round(naive.Value, 2) ms.</p>
 }
 
 @foreach (SearchResult<Element> result in searchResults)
 {
     <div @key=result.Element>
-        <h3>@result.Element.Name</h3>
-        <p>@result.Element.Summary</p>
         <hr />
+        <h3>@result.Element.Name</h3>
+        @for (int i = 0; i < result.Element.Summary.Length; i++)
+        {
+            if (result.Matches.Any(m => i == m))
+            {
+                <span style="background-color:lightgreen;">@result.Element.Summary[i..(i + query.Length)]</span>
+                i += query.Length - 1;
+            }
+            else
+            {
+                int nextMatch = result.Matches.FirstOrDefault(m => m >= i);
+                if (nextMatch != 0)
+                {
+                    <span>@result.Element.Summary[i..(nextMatch)]</span>
+                    i = nextMatch - 1;
+                }
+                else
+                {
+                    <span>@result.Element.Summary[i..]</span>
+                    i = result.Element.Summary.Length;
+                }
+            }
+        }
+        <br />
+        <small>Matched in @result.Matches.Length @(result.Matches.Length == 1 ? "place" : "places")</small>
     </div>
 }
 
@@ -47,7 +63,7 @@
     private Element[] elements = default!;
     private SearchResult<Element>[] searchResults = [];
 
-    private DocumentIndex<Element, SuffixTreeSearchIndex>? index;
+    private DocumentIndex<Element, SuffixTreeSearchIndex> index = default!;
     private int indexingProgress = 0;
 
     private string query = "";
@@ -60,20 +76,12 @@
         using var csv = new CsvReader(streamReader, CultureInfo.InvariantCulture);
         elements = csv.GetRecords<Element>().ToArray();
 
-        index = await DocumentIndex<Element, SuffixTreeSearchIndex>.CreateAsync(elements, async e =>
-        {
-            indexingProgress++;
-            StateHasChanged();
-            await Task.Delay(1);
-            return e.Summary.ToLower();
-        });
-        StateHasChanged();
-        await Task.Delay(1);
+        index = DocumentIndex<Element, SuffixTreeSearchIndex>.Create(elements, e => e.Summary.ToLower());
     }
 
     public async Task Search()
     {
-        if (query is "" || index is null)
+        if (query is "")
         {
             searchResults = [];
             searchTime = null;
@@ -85,8 +93,25 @@
         searchTime = sw.ElapsedTicks / (double)1_000_000;
 
         sw = Stopwatch.StartNew();
-        Console.WriteLine(elements.Select(e => Regex.Matches(e.Name.ToLower() + " " + e.Summary.ToLower(), query.ToLower()).Cast<Match>().Select(m => m.Index).ToArray().Length).Sum());
+        foreach(var element in elements)
+        {
+            NaiveStringSearch(element.Summary.ToLower(), query.ToLower());
+        }
         naive = sw.ElapsedTicks / (double)1_000_000;
+    }
+
+    public static List<int> NaiveStringSearch(string str, string value)
+    {
+        if (String.IsNullOrEmpty(value))
+            throw new ArgumentException("the string to find may not be empty", "value");
+        List<int> indexes = new List<int>();
+        for (int index = 0; ; index += value.Length)
+        {
+            index = str.IndexOf(value, index);
+            if (index == -1)
+                return indexes;
+            indexes.Add(index);
+        }
     }
 
     public class Element
