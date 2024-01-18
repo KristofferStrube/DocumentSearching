@@ -1,69 +1,88 @@
-﻿namespace KristofferStrube.DocumentSearching;
+﻿using System.Diagnostics;
 
-public class DocumentIndex<T>
+namespace KristofferStrube.DocumentSearching;
+
+public class DocumentIndex<TElement, TSearchIndex> where TSearchIndex : ISearchIndex
 {
     private readonly ISearchIndex _searchIndex;
-    private readonly T[] _elements;
+    private readonly TElement[] _elements;
     private readonly int[] _offsets;
 
-    private DocumentIndex(ISearchIndex searchIndex, T[] elements, int[] offsets)
+    private DocumentIndex(ISearchIndex searchIndex, TElement[] elements, int[] offsets)
     {
         _searchIndex = searchIndex;
         _elements = elements;
         _offsets = offsets;
     }
 
-    public static async Task<DocumentIndex<T>> CreateAsync<T>(ISearchIndex emptySearchIndex, T[] elements, Func<T, Task<string>> elementMapper)
+    public static async Task<DocumentIndex<TElement, TSearchIndex>> CreateAsync(TElement[] elements, Func<TElement, Task<string>> elementMapper)
     {
         int[] offsets = new int[elements.Length];
         int accumulativeOffset = 0;
+        string[] elementParts = new string[elements.Length];
 
         for (int i = 0; i < elements.Length; i++)
         {
-            offsets[i] = accumulativeOffset;
             string elementPart = await elementMapper(elements[i]);
             accumulativeOffset += elementPart.Length + 1;
-
-            emptySearchIndex.AddInputPart(elementPart);
+            offsets[i] = accumulativeOffset;
+            elementParts[i] = elementPart;
         }
+        ISearchIndex searchIndex = TSearchIndex.Create(elementParts);
 
-        return new(emptySearchIndex, elements, offsets);
+        return new(searchIndex, elements, offsets);
     }
 
-    public static DocumentIndex<T> Create<T>(ISearchIndex emptySearchIndex, T[] elements, Func<T, string> elementMapper)
+    public static DocumentIndex<TElement, TSearchIndex> Create(TElement[] elements, Func<TElement, string> elementMapper)
     {
         int[] offsets = new int[elements.Length];
         int accumulativeOffset = 0;
+        string[] elementParts = new string[elements.Length];
 
         for (int i = 0; i < elements.Length; i++)
         {
-            offsets[i] = accumulativeOffset;
             string elementPart = elementMapper(elements[i]);
             accumulativeOffset += elementPart.Length + 1;
-
-            emptySearchIndex.AddInputPart(elementPart);
+            offsets[i] = accumulativeOffset;
+            elementParts[i] = elementPart;
         }
+        ISearchIndex searchIndex = TSearchIndex.Create(elementParts);
 
-        return new(emptySearchIndex, elements, offsets);
+        return new(searchIndex, elements, offsets);
     }
 
-    public T[] ExactSearch(string query)
+    public SearchResult<TElement>[] ExactSearch(string query)
     {
         int[] results = _searchIndex.ExactSearch(query);
 
-        HashSet<T> matchingElements = [];
-        for (int i = 0; i < results.Length; i++)
+        List<SearchResult<TElement>> matchingElements = [];
+
+        int currentOffset = -1;
+        int i = -1;
+        List<int> matchesForCurrentElementMatch = new();
+        while (true)
         {
-            T matchingElement = _elements.First();
-            for (int j = 1; j < _elements.Length; j++)
+            if (currentOffset < _offsets.Length - 1)
             {
-                if (_offsets[j] > results[i])
-                {
-                    break;
-                }
-                matchingElement = _elements[j];
+                currentOffset++;
             }
-            matchingElements.Add(matchingElement);
+            if (i < results.Length - 1)
+            {
+                i++;
+                matchesForCurrentElementMatch.Add(results[i]);
+            }
+            if ((currentOffset == _offsets.Length - 1 && i == results.Length - 1) || (results[i] < _offsets[currentOffset] && (i+1 == results.Length || results[i+1] > _offsets[currentOffset])))
+            {
+                if (matchesForCurrentElementMatch.Count is not 0)
+                {
+                    matchingElements.Add(new(_elements[currentOffset], matchesForCurrentElementMatch.ToArray()));
+                    matchesForCurrentElementMatch.Clear();
+                }
+            }
+            if (currentOffset == _offsets.Length - 1 && i == results.Length - 1)
+            {
+                break;
+            }
         }
 
         return matchingElements.ToArray();

@@ -4,6 +4,7 @@
 @using CsvHelper.Configuration.Attributes
 @using KristofferStrube.DocumentSearching.SuffixTree
 @using System.Diagnostics
+@using System.Text.RegularExpressions
 @inject HttpClient HttpClient
 
 <PageTitle>DocumentSearching - Search</PageTitle>
@@ -26,26 +27,27 @@
 }
 <input @bind=query @bind:event="oninput" @bind:after=Search style="width:100%;" />
 <br />
-@if (searchTime is not null)
+@if (searchTime is not null && naive is not null)
 {
-    <p>Found @matchingElements.Length @(matchingElements.Length is 1 ? "element" : "elements") in @($"{searchTime.Value:0.0}") ms.</p>
+    <p>Found @searchResults.Length @(searchResults.Length is 1 ? "element" : "elements") in @($"{searchTime.Value:0.0}") ms compared to a naive Regex search in @($"{naive.Value:0.0}") ms.</p>
 }
 
-@foreach (Element element in matchingElements)
+@foreach (SearchResult<Element> result in searchResults)
 {
-    <div @key=element>
-        <h3>@element.Name</h3>
-        <p>@element.Summary</p>
+    <div @key=result.Element>
+        <h3>@result.Element.Name</h3>
+        <p>@result.Element.Summary</p>
         <hr />
     </div>
 }
 
 @code {
     private double? searchTime;
+    private double? naive;
     private Element[] elements = default!;
-    private Element[] matchingElements = [];
+    private SearchResult<Element>[] searchResults = [];
 
-    private DocumentIndex<Element>? index;
+    private DocumentIndex<Element, SuffixTreeSearchIndex>? index;
     private int indexingProgress = 0;
 
     private string query = "";
@@ -58,28 +60,33 @@
         using var csv = new CsvReader(streamReader, CultureInfo.InvariantCulture);
         elements = csv.GetRecords<Element>().ToArray();
 
-        SuffixTreeSearchIndex searchIndex = new();
-        index = await DocumentIndex<Element>.CreateAsync(searchIndex, elements[..^2], async e =>
+        index = await DocumentIndex<Element, SuffixTreeSearchIndex>.CreateAsync(elements, async e =>
         {
             indexingProgress++;
             StateHasChanged();
             await Task.Delay(1);
             return e.Name.ToLower() + " " + e.Summary.ToLower();
         });
+        StateHasChanged();
+        await Task.Delay(1);
     }
 
     public async Task Search()
     {
         if (query is "" || index is null)
         {
-            matchingElements = [];
+            searchResults = [];
             searchTime = null;
             return;
         }
 
         Stopwatch sw = Stopwatch.StartNew();
-        matchingElements = index.ExactSearch(query.ToLower());
+        searchResults = index.ExactSearch(query.ToLower());
         searchTime = sw.ElapsedTicks / (double)1_000_000;
+
+        sw = Stopwatch.StartNew();
+        Console.WriteLine(elements.Select(e => Regex.Matches(e.Name.ToLower() + " " + e.Summary.ToLower(), query.ToLower()).Cast<Match>().Select(m => m.Index).ToArray().Length).Sum());
+        naive = sw.ElapsedTicks / (double)1_000_000;
     }
 
     public class Element

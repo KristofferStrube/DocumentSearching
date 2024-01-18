@@ -2,12 +2,18 @@
 
 public class Node
 {
-    public HashSet<int> Offsets { get; }
+    public int? Label { get; }
+    public int From { get; set; }
+    public int To { get; }
+    public Node Parent { get; set; }
     public Node?[] Children { get; set; }
 
-    public Node(int alphabetSize)
+    public Node(int from, int to, Node parent, int alphabetSize, int? label = null)
     {
+        From = from;
+        To = to;
+        Parent = parent;
         Children = new Node?[alphabetSize];
-        Offsets = [];
+        Label = label;
     }
 }

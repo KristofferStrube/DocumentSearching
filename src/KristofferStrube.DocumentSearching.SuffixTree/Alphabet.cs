@@ -19,7 +19,7 @@ public class Alphabet
     {
         EncodeMap = enodeMap;
         DecodeMap = decodeMap;
-        Size = decodeMap.Length + 1;
+        Size = decodeMap.Length * 2 + 1;
     }
 
     public static int[] EncodeInput(string input, out Alphabet alphabet)
@@ -27,7 +27,7 @@ public class Alphabet
         HashSet<char> characters = [];
         int encodeIndex = 1;
         Dictionary<char, int> encodeMap = [];
-        List<char> decodeMap = [];
+        List<char> decodeMap = ['_'];
 
         int[] encodedInput = new int[input.Length + 1];
 
@@ -53,35 +53,44 @@ public class Alphabet
         return encodedInput;
     }
 
-    public int[] AddAndEncodeInput(string input)
+    public static int[] EncodeInputParts(string[] inputParts, out Alphabet alphabet)
     {
-        HashSet<char> characters = new(DecodeMap);
-        int encodeIndex = DecodeMap.Length;
-        List<char> newDecodeMap = new(DecodeMap);
+        HashSet<char> characters = [];
+        int encodeIndex = 1;
+        Dictionary<char, int> encodeMap = [];
+        List<char> decodeMap = ['_'];
 
-        int[] encodedInput = new int[input.Length + 1];
+        int sumPartLengths = inputParts.Sum(p => p.Length + 1);
 
-        for (int i = 0; i < input.Length; i++)
+        int[] encodedInput = new int[sumPartLengths];
+
+        int x = 0;
+        for (int j = 0; j < inputParts.Length; j++)
         {
-            char currentCharacter = input[i];
-            if (characters.Add(currentCharacter))
+            string input = inputParts[j];
+            for (int i = 0; i < input.Length; i++)
             {
-                encodedInput[i] = encodeIndex;
-                EncodeMap.Add(currentCharacter, encodeIndex);
-                newDecodeMap.Add(currentCharacter);
-                encodeIndex++;
+                char currentCharacter = input[i];
+                if (characters.Add(currentCharacter))
+                {
+                    encodedInput[x] = encodeIndex;
+                    encodeMap.Add(currentCharacter, encodeIndex);
+                    decodeMap.Add(currentCharacter);
+                    encodeIndex++;
+                }
+                else
+                {
+                    encodedInput[x] = encodeMap[currentCharacter];
+                }
+                x++;
             }
-            else
-            {
-                encodedInput[i] = EncodeMap[currentCharacter];
-            }
+            // Adding sentinal
+            encodedInput[x] = 0;
+            x++;
         }
-        // Adding sentinal
-        encodedInput[input.Length] = 0;
-        DecodeMap = newDecodeMap.ToArray();
-        Size = DecodeMap.Length + 1;
 
-        return encodedInput;
+        alphabet = new(encodeMap, decodeMap.ToArray());
+        return encodedInput.ToArray();
     }
 
     public int[]? EncodeQuery(string query)
