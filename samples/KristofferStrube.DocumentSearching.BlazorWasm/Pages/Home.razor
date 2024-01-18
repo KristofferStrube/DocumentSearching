@@ -65,7 +65,7 @@
             indexingProgress++;
             StateHasChanged();
             await Task.Delay(1);
-            return e.Name.ToLower() + " " + e.Summary.ToLower();
+            return e.Summary.ToLower();
         });
         StateHasChanged();
         await Task.Delay(1);

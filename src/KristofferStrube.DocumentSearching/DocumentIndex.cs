@@ -24,8 +24,8 @@ public class DocumentIndex<TElement, TSearchIndex> where TSearchIndex : ISearchI
         for (int i = 0; i < elements.Length; i++)
         {
             string elementPart = await elementMapper(elements[i]);
-            accumulativeOffset += elementPart.Length + 1;
             offsets[i] = accumulativeOffset;
+            accumulativeOffset += elementPart.Length + 1;
             elementParts[i] = elementPart;
         }
         ISearchIndex searchIndex = TSearchIndex.Create(elementParts);
@@ -42,8 +42,8 @@ public class DocumentIndex<TElement, TSearchIndex> where TSearchIndex : ISearchI
         for (int i = 0; i < elements.Length; i++)
         {
             string elementPart = elementMapper(elements[i]);
-            accumulativeOffset += elementPart.Length + 1;
             offsets[i] = accumulativeOffset;
+            accumulativeOffset += elementPart.Length + 1;
             elementParts[i] = elementPart;
         }
         ISearchIndex searchIndex = TSearchIndex.Create(elementParts);
@@ -55,34 +55,37 @@ public class DocumentIndex<TElement, TSearchIndex> where TSearchIndex : ISearchI
     {
         int[] results = _searchIndex.ExactSearch(query);
 
-        List<SearchResult<TElement>> matchingElements = [];
+        Dictionary<int, List<int>> buckets = new();
 
-        int currentOffset = -1;
-        int i = -1;
-        List<int> matchesForCurrentElementMatch = new();
-        while (true)
+        for (int i = 0; i < results.Length; i++)
         {
-            if (currentOffset < _offsets.Length - 1)
+            int result = results[i];
+            for (int j = 0; j < _offsets.Length; j++)
             {
-                currentOffset++;
-            }
-            if (i < results.Length - 1)
-            {
-                i++;
-                matchesForCurrentElementMatch.Add(results[i]);
-            }
-            if ((currentOffset == _offsets.Length - 1 && i == results.Length - 1) || (results[i] < _offsets[currentOffset] && (i+1 == results.Length || results[i+1] > _offsets[currentOffset])))
-            {
-                if (matchesForCurrentElementMatch.Count is not 0)
+                if (j == _offsets.Length - 1 || result < _offsets[j + 1])
                 {
-                    matchingElements.Add(new(_elements[currentOffset], matchesForCurrentElementMatch.ToArray()));
-                    matchesForCurrentElementMatch.Clear();
+                    if (buckets.TryGetValue(j, out List<int>? matches))
+                    {
+                        matches.Add(result - _offsets[j]);
+                    }
+                    else
+                    {
+                        matches = [result - _offsets[j]];
+                        buckets.Add(j, matches);
+                    }
+                    break;
                 }
             }
-            if (currentOffset == _offsets.Length - 1 && i == results.Length - 1)
-            {
-                break;
-            }
+        }
+
+
+        SearchResult<TElement>[] matchingElements = new SearchResult<TElement>[buckets.Count];
+
+        int k = 0;
+        foreach (int key in buckets.Keys)
+        {
+            matchingElements[k] = new(_elements[key], buckets[key].ToArray());
+            k++;
         }
 
         return matchingElements.ToArray();
