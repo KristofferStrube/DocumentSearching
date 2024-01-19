@@ -53,20 +53,18 @@ public class DocumentIndex<TElement, TSearchIndex> where TSearchIndex : ISearchI
 
     public SearchResult<TElement>[] ExactSearch(string query)
     {
-        string[] queryParts;
-        if (query.Trim().Length is 0)
-        {
-            queryParts = [query];
-        }
-        else
-        {
-            queryParts = query.Trim().Split(" ").Where(s => s.Trim() is not "").ToArray();
-        }
-       
-        Dictionary<int, List<Match>> buckets = new();
+        string[] queryParts = query.Split(" ").Where(s => s.Trim() is not "").Distinct().ToArray();
+
+        if (queryParts.Length is 0)
+            return []; 
+
+        Dictionary<int, List<Match>>[] partBuckets = new Dictionary<int, List<Match>>[queryParts.Length];
 
         for (int q = 0; q < queryParts.Length; q++)
         {
+            Dictionary<int, List<Match>> buckets = new();
+            partBuckets[q] = buckets;
+
             int[] results = _searchIndex.ExactSearch(queryParts[q]);
 
             for (int i = 0; i < results.Length; i++)
@@ -92,14 +90,27 @@ public class DocumentIndex<TElement, TSearchIndex> where TSearchIndex : ISearchI
             }
         }
 
+        Dictionary<int, List<Match>> combinedBuckets = partBuckets.First();
 
+        foreach (Dictionary<int, List<Match>> buckets in partBuckets.Skip(1))
+        {
+            Dictionary<int, List<Match>> temporaryBucket = new();
+            foreach(int key in buckets.Keys)
+            {
+                if (combinedBuckets.ContainsKey(key) && buckets.ContainsKey(key))
+                {
+                    temporaryBucket.Add(key, combinedBuckets[key].Concat(buckets[key]).ToList());
+                }
+            }
+            combinedBuckets = temporaryBucket;
+        }
 
-        SearchResult<TElement>[] matchingElements = new SearchResult<TElement>[buckets.Count];
+        SearchResult<TElement>[] matchingElements = new SearchResult<TElement>[combinedBuckets.Count];
 
         int k = 0;
-        foreach (int key in buckets.Keys.OrderByDescending(k => buckets[k].Count))
+        foreach (int key in combinedBuckets.Keys.OrderByDescending(k => combinedBuckets[k].Count))
         {
-            matchingElements[k] = new(_elements[key], buckets[key].OrderBy(m => m.Position).ToArray());
+            matchingElements[k] = new(_elements[key], combinedBuckets[key].OrderBy(m => m.Position).ToArray());
             k++;
         }
 
