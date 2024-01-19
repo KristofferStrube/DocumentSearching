@@ -4,9 +4,9 @@ public class SearchResult<T>
 {
     public T Element { get; }
 
-    public int[] Matches { get; }
+    public Match[] Matches { get; }
 
-    public SearchResult(T element, int[] matches)
+    public SearchResult(T element, Match[] matches)
     {
         Element = element;
         Matches = matches;

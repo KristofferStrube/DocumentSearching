@@ -53,30 +53,45 @@ public class DocumentIndex<TElement, TSearchIndex> where TSearchIndex : ISearchI
 
     public SearchResult<TElement>[] ExactSearch(string query)
     {
-        int[] results = _searchIndex.ExactSearch(query);
-
-        Dictionary<int, List<int>> buckets = new();
-
-        for (int i = 0; i < results.Length; i++)
+        string[] queryParts;
+        if (query.Trim().Length is 0)
         {
-            int result = results[i];
-            for (int j = 0; j < _offsets.Length; j++)
+            queryParts = [query];
+        }
+        else
+        {
+            queryParts = query.Trim().Split(" ").Where(s => s.Trim() is not "").ToArray();
+        }
+       
+        Dictionary<int, List<Match>> buckets = new();
+
+        for (int q = 0; q < queryParts.Length; q++)
+        {
+            int[] results = _searchIndex.ExactSearch(queryParts[q]);
+
+            for (int i = 0; i < results.Length; i++)
             {
-                if (j == _offsets.Length - 1 || result < _offsets[j + 1])
+                int result = results[i];
+                for (int j = 0; j < _offsets.Length; j++)
                 {
-                    if (buckets.TryGetValue(j, out List<int>? matches))
+                    if (j == _offsets.Length - 1 || result < _offsets[j + 1])
                     {
-                        matches.Add(result - _offsets[j]);
+                        Match match = new Match(result - _offsets[j], queryParts[q].Length);
+                        if (buckets.TryGetValue(j, out List<Match>? matches))
+                        {
+                            matches.Add(match);
+                        }
+                        else
+                        {
+                            matches = [match];
+                            buckets.Add(j, matches);
+                        }
+                        break;
                     }
-                    else
-                    {
-                        matches = [result - _offsets[j]];
-                        buckets.Add(j, matches);
-                    }
-                    break;
                 }
             }
         }
+
 
 
         SearchResult<TElement>[] matchingElements = new SearchResult<TElement>[buckets.Count];
@@ -84,7 +99,7 @@ public class DocumentIndex<TElement, TSearchIndex> where TSearchIndex : ISearchI
         int k = 0;
         foreach (int key in buckets.Keys.OrderByDescending(k => buckets[k].Count))
         {
-            matchingElements[k] = new(_elements[key], buckets[key].Order().ToArray());
+            matchingElements[k] = new(_elements[key], buckets[key].OrderBy(m => m.Position).ToArray());
             k++;
         }
 

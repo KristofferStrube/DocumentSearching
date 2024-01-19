@@ -12,7 +12,7 @@
 <h1>Search</h1>
 <p>
     Here you can search through all the elements in the periodic table using an in-memory search index.<br />
-    <small>Try seaching "Hydrogen"</small>
+    <small>Try seaching "light chemical" to find Hydrogen.</small>
 </p>
 @if (index is null)
 {
@@ -32,14 +32,14 @@
         <h3>@result.Element.Name</h3>
         @for (int i = 0; i < result.Element.Summary.Length; i++)
         {
-            if (result.Matches.Any(m => i == m))
+            if (result.Matches.FirstOrDefault(m => i == m.Position) is { } match && match.Length is not 0)
             {
-                <span style="background-color:lightgreen;">@result.Element.Summary[i..(i + query.Length)]</span>
-                i += query.Length - 1;
+                <span style="background-color:lightgreen;">@result.Element.Summary[i..(i + match.Length)]</span>
+                i += match.Length - 1;
             }
             else
             {
-                int nextMatch = result.Matches.FirstOrDefault(m => m >= i);
+                int nextMatch = result.Matches.FirstOrDefault(m => m.Position >= i).Position;
                 if (nextMatch != 0)
                 {
                     <span>@result.Element.Summary[i..(nextMatch)]</span>
@@ -89,18 +89,15 @@
         }
 
         Stopwatch sw = Stopwatch.StartNew();
-        for (int i = 0; i < 10; i ++)
-        {
-            searchResults = index.ExactSearch(query.ToLower());
-        }
+        searchResults = index.ExactSearch(query.ToLower());
         searchTime = sw.ElapsedTicks / (double)1_000_000;
 
         sw = Stopwatch.StartNew();
-        for (int i = 0; i < 10; i++)
+        foreach (string queryPart in query.Split(" ").Where(s => s.Trim().Length is not 0))
         {
             foreach (var element in elements)
             {
-                NaiveStringSearch(element.Summary.ToLower(), query.ToLower());
+                NaiveStringSearch(element.Summary.ToLower(), queryPart.ToLower());
             }
         }
         naive = sw.ElapsedTicks / (double)1_000_000;

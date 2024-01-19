@@ -23,7 +23,7 @@ public class DocumentIndexTests
         // Assert
         results.Should().HaveCount(1);
         results.Single().Element.id.Should().Be(4);
-        results.Single().Matches.Single().Should().Be(0);
+        results.Single().Matches.Single().Position.Should().Be(0);
     }
 
     [Fact]
@@ -45,9 +45,9 @@ public class DocumentIndexTests
         // Assert
         results.Should().HaveCount(2);
         results[0].Element.id.Should().Be(2);
-        results[0].Matches.Single().Should().Be(4);
+        results[0].Matches.Single().Position.Should().Be(4);
         results[1].Element.id.Should().Be(1);
-        results[1].Matches.Single().Should().Be(32);
+        results[1].Matches.Single().Position.Should().Be(32);
     }
 
     [Fact]
@@ -83,11 +83,11 @@ public class DocumentIndexTests
         // Act
         var documentIndex = DocumentIndex<(int id, string content), SuffixTreeSearchIndex>.Create(elements, c => c.content);
 
-        var results = documentIndex.ExactSearch("chemical element with symbol he");
+        var results = documentIndex.ExactSearch("2");
 
         // Assert
         results.Should().HaveCount(1);
         results.Single().Element.id.Should().Be(2);
-        results.Single().Matches.Single().Should().Be(12);
+        results.Single().Matches.Single().Position.Should().Be(62);
     }
 }
