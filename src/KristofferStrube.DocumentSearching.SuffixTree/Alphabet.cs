@@ -1,27 +1,24 @@
-﻿using System.Reflection;
+﻿using System.Text.Json.Serialization;
 
 namespace KristofferStrube.DocumentSearching.SearchTree;
 
 public class Alphabet
 {
-    public Dictionary<char, int> EncodeMap { get; }
+    public Dictionary<char, int> EncodeMap { get; init; }
 
-    public char[] DecodeMap { get; private set; }
+    public char[] DecodeMap { get; init; }
 
-    public int Size { get; private set; }
+    public int Size { get; init; }
 
-    public Alphabet()
-    {
-        EncodeMap = [];
-        DecodeMap = [];
-        Size = 1;
-    }
+    [Obsolete("Only use for serialization")]
+    [JsonConstructor]
+    public Alphabet() { }
 
     private Alphabet(Dictionary<char, int> enodeMap, char[] decodeMap)
     {
         EncodeMap = enodeMap;
         DecodeMap = decodeMap;
-        Size = decodeMap.Length * 2 + 1;
+        Size = decodeMap.Length;
     }
 
     public static int[] EncodeInput(string input, out Alphabet alphabet)

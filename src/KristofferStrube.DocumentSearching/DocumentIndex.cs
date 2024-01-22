@@ -1,18 +1,22 @@
-﻿using System.Diagnostics;
+﻿using System.Text.Json.Serialization;
 
 namespace KristofferStrube.DocumentSearching;
 
-public class DocumentIndex<TElement, TSearchIndex> where TSearchIndex : ISearchIndex
+public class DocumentIndex<TElement, TSearchIndex> where TSearchIndex : ISearchIndex<TSearchIndex>
 {
-    private readonly ISearchIndex _searchIndex;
-    private readonly TElement[] _elements;
-    private readonly int[] _offsets;
+    public TSearchIndex SearchIndex { get; init; }
+    public TElement[] Elements { get; init; }
+    public int[] Offsets { get; init; }
 
-    private DocumentIndex(ISearchIndex searchIndex, TElement[] elements, int[] offsets)
+    [Obsolete("Only use for serialization")]
+    [JsonConstructor]
+    public DocumentIndex() { }
+
+    private DocumentIndex(TSearchIndex searchIndex, TElement[] elements, int[] offsets)
     {
-        _searchIndex = searchIndex;
-        _elements = elements;
-        _offsets = offsets;
+        SearchIndex = searchIndex;
+        Elements = elements;
+        Offsets = offsets;
     }
 
     public static async Task<DocumentIndex<TElement, TSearchIndex>> CreateAsync(TElement[] elements, Func<TElement, Task<string>> elementMapper)
@@ -28,9 +32,11 @@ public class DocumentIndex<TElement, TSearchIndex> where TSearchIndex : ISearchI
             accumulativeOffset += elementPart.Length + 1;
             elementParts[i] = elementPart;
         }
-        ISearchIndex searchIndex = TSearchIndex.Create(elementParts);
+        TSearchIndex searchIndex = TSearchIndex.Create(elementParts);
 
+#pragma warning disable CS0618 // Type or member is obsolete
         return new(searchIndex, elements, offsets);
+#pragma warning restore CS0618 // Type or member is obsolete
     }
 
     public static DocumentIndex<TElement, TSearchIndex> Create(TElement[] elements, Func<TElement, string> elementMapper)
@@ -46,9 +52,11 @@ public class DocumentIndex<TElement, TSearchIndex> where TSearchIndex : ISearchI
             accumulativeOffset += elementPart.Length + 1;
             elementParts[i] = elementPart;
         }
-        ISearchIndex searchIndex = TSearchIndex.Create(elementParts);
+        TSearchIndex searchIndex = TSearchIndex.Create(elementParts);
 
+#pragma warning disable CS0618 // Type or member is obsolete
         return new(searchIndex, elements, offsets);
+#pragma warning restore CS0618 // Type or member is obsolete
     }
 
     public SearchResult<TElement>[] ExactSearch(string query)
@@ -65,16 +73,16 @@ public class DocumentIndex<TElement, TSearchIndex> where TSearchIndex : ISearchI
             Dictionary<int, List<Match>> buckets = new();
             partBuckets[q] = buckets;
 
-            int[] results = _searchIndex.ExactSearch(queryParts[q]);
+            int[] results = SearchIndex.ExactSearch(queryParts[q]);
 
             for (int i = 0; i < results.Length; i++)
             {
                 int result = results[i];
-                for (int j = 0; j < _offsets.Length; j++)
+                for (int j = 0; j < Offsets.Length; j++)
                 {
-                    if (j == _offsets.Length - 1 || result < _offsets[j + 1])
+                    if (j == Offsets.Length - 1 || result < Offsets[j + 1])
                     {
-                        Match match = new Match(result - _offsets[j], queryParts[q].Length);
+                        Match match = new Match(result - Offsets[j], queryParts[q].Length);
                         if (buckets.TryGetValue(j, out List<Match>? matches))
                         {
                             matches.Add(match);
@@ -110,7 +118,7 @@ public class DocumentIndex<TElement, TSearchIndex> where TSearchIndex : ISearchI
         int k = 0;
         foreach (int key in combinedBuckets.Keys.OrderByDescending(k => combinedBuckets[k].Count))
         {
-            matchingElements[k] = new(_elements[key], combinedBuckets[key].OrderBy(m => m.Position).ToArray());
+            matchingElements[k] = new(Elements[key], combinedBuckets[key].OrderBy(m => m.Position).ToArray());
             k++;
         }
 

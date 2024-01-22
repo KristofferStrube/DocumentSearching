@@ -1,20 +1,26 @@
-﻿using KristofferStrube.DocumentSearching.SearchTree;
+﻿using System.Text.Json.Serialization;
+using KristofferStrube.DocumentSearching.SearchTree;
 
 namespace KristofferStrube.DocumentSearching.SuffixTree;
 
-public class SuffixTreeSearchIndex : ISearchIndex
+public class SuffixTreeSearchIndex : ISearchIndex<SuffixTreeSearchIndex>
 {
-    private readonly Node _root;
-    private readonly Alphabet _alphabet;
-    private int[] _input;
+    public Node Root { get; init; }
+    public Alphabet Alphabet { get; init; }
+    public int[] Input { get; init; }
+
+    [Obsolete("Only use for serialization")]
+    [JsonConstructor]
+    public SuffixTreeSearchIndex() { }
 
     public SuffixTreeSearchIndex(string input)
     {
-        _input = Alphabet.EncodeInput(input, out _alphabet);
+        Input = Alphabet.EncodeInput(input, out Alphabet alphabet);
+        Alphabet = alphabet;
 
-        _root = new Node(0, 0, null, _alphabet.Size);
+        Root = new Node(0, 0, null, Alphabet.Size);
 
-        for (int i = 0; i < _input.Length; i++)
+        for (int i = 0; i < Input.Length; i++)
         {
             AddSuffix(i);
         }
@@ -22,43 +28,44 @@ public class SuffixTreeSearchIndex : ISearchIndex
 
     public SuffixTreeSearchIndex(string[] inputParts)
     {
-        _input = Alphabet.EncodeInputParts(inputParts, out _alphabet);
+        Input = Alphabet.EncodeInputParts(inputParts, out Alphabet alphabet);
+        Alphabet = alphabet;
 
-        _root = new Node(0, 0, null, _alphabet.Size);
+        Root = new Node(0, 0, null, Alphabet.Size);
 
-        for (int i = 0; i < _input.Length; i++)
+        for (int i = 0; i < Input.Length; i++)
         {
             AddSuffix(i);
         }
     }
 
-    public static ISearchIndex Create(string[] inputParts)
+    public static SuffixTreeSearchIndex Create(string[] inputParts)
     {
         return new SuffixTreeSearchIndex(inputParts);
     }
 
     private void AddSuffix(int offset)
     {
-        Node currentNode = _root;
+        Node currentNode = Root;
         int x = offset;
 
-        while (x < _input.Length)
+        while (x < Input.Length)
         {
-            int nextChar = _input[x];
+            int nextChar = Input[x];
             Node? matchingChild = currentNode.Children[nextChar];
             if (matchingChild is null)
             {
-                currentNode.Children[nextChar] = new Node(x, _input.Length, currentNode, _alphabet.Size, offset);
+                currentNode.Children[nextChar] = new Node(x, Input.Length, currentNode, Alphabet.Size, offset);
                 return;
             }
 
             int s = matchingChild.From;
-            while (s != matchingChild.To && x < _input.Length)
+            while (s != matchingChild.To && x < Input.Length)
             {
-                if (_input[s] != _input[x])
+                if (Input[s] != Input[x])
                 {
                     Node splitNode = SplitEdge(matchingChild, s);
-                    splitNode.Children[_input[x]] = new Node(x, _input.Length, splitNode, _alphabet.Size, offset);
+                    splitNode.Children[Input[x]] = new Node(x, Input.Length, splitNode, Alphabet.Size, offset);
                     return;
                 }
                 s++;
@@ -71,24 +78,24 @@ public class SuffixTreeSearchIndex : ISearchIndex
     private Node SplitEdge(Node node, int splitPoint)
     {
         Node parent = node.Parent;
-        Node splitNode = new Node(node.From, splitPoint, parent, _alphabet.Size);
-        splitNode.Children[_input[splitPoint]] = node;
+        Node splitNode = new Node(node.From, splitPoint, parent, Alphabet.Size);
+        splitNode.Children[Input[splitPoint]] = node;
         node.From = splitPoint;
         node.Parent = splitNode;
-        parent.Children[_input[splitNode.From]] = splitNode;
+        parent.Children[Input[splitNode.From]] = splitNode;
         return splitNode;
     }
 
     public int[] ExactSearch(string query)
     {
-        int[]? encodedQuery = _alphabet.EncodeQuery(query);
+        int[]? encodedQuery = Alphabet.EncodeQuery(query);
 
         if (encodedQuery is null)
         {
             return [];
         }
 
-        Node? currentNode = _root;
+        Node? currentNode = Root;
         int s = 0;
         int x = 0;
         while (s < encodedQuery.Length)
@@ -104,7 +111,7 @@ public class SuffixTreeSearchIndex : ISearchIndex
                 x = currentNode.From;
                 continue;
             }
-            if (character != _input[x])
+            if (character != Input[x])
             {
                 return [];
             }
@@ -135,7 +142,7 @@ public class SuffixTreeSearchIndex : ISearchIndex
             }
             else
             {
-                for (int i = 0; i < _alphabet.Size; i++)
+                for (int i = 0; i < Alphabet.Size; i++)
                 {
                     if (currentNode.Children.Length > i && currentNode.Children[i] is { } existingChild)
                     {
