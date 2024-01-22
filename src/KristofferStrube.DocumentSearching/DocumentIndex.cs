@@ -2,24 +2,26 @@
 
 namespace KristofferStrube.DocumentSearching;
 
-public class DocumentIndex<TElement, TSearchIndex> where TSearchIndex : ISearchIndex<TSearchIndex>
+public class DocumentIndex<TElement>
 {
-    public TSearchIndex SearchIndex { get; init; }
+    public SuffixTreeSearchIndex SearchIndex { get; init; }
     public TElement[] Elements { get; init; }
     public int[] Offsets { get; init; }
 
     [Obsolete("Only use for serialization")]
     [JsonConstructor]
+#pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
     public DocumentIndex() { }
+#pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
 
-    private DocumentIndex(TSearchIndex searchIndex, TElement[] elements, int[] offsets)
+    private DocumentIndex(SuffixTreeSearchIndex searchIndex, TElement[] elements, int[] offsets)
     {
         SearchIndex = searchIndex;
         Elements = elements;
         Offsets = offsets;
     }
 
-    public static async Task<DocumentIndex<TElement, TSearchIndex>> CreateAsync(TElement[] elements, Func<TElement, Task<string>> elementMapper)
+    public static async Task<DocumentIndex<TElement>> CreateAsync(TElement[] elements, Func<TElement, Task<string>> elementMapper)
     {
         int[] offsets = new int[elements.Length];
         int accumulativeOffset = 0;
@@ -32,14 +34,12 @@ public class DocumentIndex<TElement, TSearchIndex> where TSearchIndex : ISearchI
             accumulativeOffset += elementPart.Length + 1;
             elementParts[i] = elementPart;
         }
-        TSearchIndex searchIndex = TSearchIndex.Create(elementParts);
+        SuffixTreeSearchIndex searchIndex = SuffixTreeSearchIndex.Create(elementParts);
 
-#pragma warning disable CS0618 // Type or member is obsolete
         return new(searchIndex, elements, offsets);
-#pragma warning restore CS0618 // Type or member is obsolete
     }
 
-    public static DocumentIndex<TElement, TSearchIndex> Create(TElement[] elements, Func<TElement, string> elementMapper)
+    public static DocumentIndex<TElement> Create(TElement[] elements, Func<TElement, string> elementMapper)
     {
         int[] offsets = new int[elements.Length];
         int accumulativeOffset = 0;
@@ -52,11 +52,9 @@ public class DocumentIndex<TElement, TSearchIndex> where TSearchIndex : ISearchI
             accumulativeOffset += elementPart.Length + 1;
             elementParts[i] = elementPart;
         }
-        TSearchIndex searchIndex = TSearchIndex.Create(elementParts);
+        SuffixTreeSearchIndex searchIndex = SuffixTreeSearchIndex.Create(elementParts);
 
-#pragma warning disable CS0618 // Type or member is obsolete
         return new(searchIndex, elements, offsets);
-#pragma warning restore CS0618 // Type or member is obsolete
     }
 
     public SearchResult<TElement>[] ExactSearch(string query)
@@ -70,7 +68,7 @@ public class DocumentIndex<TElement, TSearchIndex> where TSearchIndex : ISearchI
 
         for (int q = 0; q < queryParts.Length; q++)
         {
-            Dictionary<int, List<Match>> buckets = new();
+            Dictionary<int, List<Match>> buckets = [];
             partBuckets[q] = buckets;
 
             int[] results = SearchIndex.ExactSearch(queryParts[q]);
@@ -82,7 +80,7 @@ public class DocumentIndex<TElement, TSearchIndex> where TSearchIndex : ISearchI
                 {
                     if (j == Offsets.Length - 1 || result < Offsets[j + 1])
                     {
-                        Match match = new Match(result - Offsets[j], queryParts[q].Length);
+                        Match match = new(result - Offsets[j], queryParts[q].Length);
                         if (buckets.TryGetValue(j, out List<Match>? matches))
                         {
                             matches.Add(match);
@@ -102,12 +100,12 @@ public class DocumentIndex<TElement, TSearchIndex> where TSearchIndex : ISearchI
 
         foreach (Dictionary<int, List<Match>> buckets in partBuckets.Skip(1))
         {
-            Dictionary<int, List<Match>> temporaryBucket = new();
+            Dictionary<int, List<Match>> temporaryBucket = [];
             foreach(int key in buckets.Keys)
             {
                 if (combinedBuckets.ContainsKey(key) && buckets.ContainsKey(key))
                 {
-                    temporaryBucket.Add(key, combinedBuckets[key].Concat(buckets[key]).ToList());
+                    temporaryBucket.Add(key, [.. combinedBuckets[key], .. buckets[key]]);
                 }
             }
             combinedBuckets = temporaryBucket;
@@ -118,10 +116,10 @@ public class DocumentIndex<TElement, TSearchIndex> where TSearchIndex : ISearchI
         int k = 0;
         foreach (int key in combinedBuckets.Keys.OrderByDescending(k => combinedBuckets[k].Count))
         {
-            matchingElements[k] = new(Elements[key], combinedBuckets[key].OrderBy(m => m.Position).ToArray());
+            matchingElements[k] = new(Elements[key], [.. combinedBuckets[key].OrderBy(m => m.Position)]);
             k++;
         }
 
-        return matchingElements.ToArray();
+        return [.. matchingElements];
     }
 }

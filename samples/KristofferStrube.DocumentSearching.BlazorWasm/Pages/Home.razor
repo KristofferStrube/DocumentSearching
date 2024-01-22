@@ -2,7 +2,6 @@
 @using System.Globalization
 @using CsvHelper
 @using CsvHelper.Configuration.Attributes
-@using KristofferStrube.DocumentSearching.SuffixTree
 @using System.Diagnostics
 @using System.Text.RegularExpressions
 @inject HttpClient HttpClient
@@ -63,8 +62,7 @@
     private Element[] elements = default!;
     private SearchResult<Element>[] searchResults = [];
 
-    private DocumentIndex<Element, SuffixTreeSearchIndex> index = default!;
-    private int indexingProgress = 0;
+    private DocumentIndex<Element> index = default!;
 
     private string query = "";
 
@@ -76,10 +74,10 @@
         using var csv = new CsvReader(streamReader, CultureInfo.InvariantCulture);
         elements = csv.GetRecords<Element>().ToArray();
 
-        index = DocumentIndex<Element, SuffixTreeSearchIndex>.Create(elements, e => e.Summary.ToLower());
+        index = DocumentIndex<Element>.Create(elements, e => e.Summary.ToLower());
     }
 
-    public async Task Search()
+    public void Search()
     {
         if (query is "")
         {

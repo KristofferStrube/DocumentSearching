@@ -1,6 +1,4 @@
-﻿using KristofferStrube.DocumentSearching.SuffixTree;
-
-namespace KristofferStrube.DocumentSearching.Tests;
+﻿namespace KristofferStrube.DocumentSearching.Tests;
 
 public class DocumentIndexTests
 {
@@ -16,12 +14,12 @@ public class DocumentIndexTests
         ];
 
         // Act
-        var documentIndex = DocumentIndex<(int id, string content), SuffixTreeSearchIndex>.Create(elements, c => c.content);
+        var documentIndex = DocumentIndex<(int id, string content)>.Create(elements, c => c.content);
 
         var results = documentIndex.ExactSearch("mis");
 
         // Assert
-        results.Should().HaveCount(1);
+        results.Should().ContainSingle();
         results.Single().Element.id.Should().Be(4);
         results.Single().Matches.Single().Position.Should().Be(0);
     }
@@ -38,7 +36,7 @@ public class DocumentIndexTests
         ];
 
         // Act
-        var documentIndex = DocumentIndex<(int id, string content), SuffixTreeSearchIndex>.Create(elements, c => c.content);
+        var documentIndex = DocumentIndex<(int id, string content)>.Create(elements, c => c.content);
 
         var results = documentIndex.ExactSearch("!");
 
@@ -62,12 +60,12 @@ public class DocumentIndexTests
         ];
 
         // Act
-        var documentIndex = DocumentIndex<(int id, string content), SuffixTreeSearchIndex>.Create(elements, c => c.content);
+        var documentIndex = DocumentIndex<(int id, string content)>.Create(elements, c => c.content);
 
         var results = documentIndex.ExactSearch("s");
 
         // Assert
-        results.Should().HaveCount(1);
+        results.Should().ContainSingle();
         results[0].Element.id.Should().Be(4);
     }
 
@@ -81,12 +79,12 @@ public class DocumentIndexTests
         ];
 
         // Act
-        var documentIndex = DocumentIndex<(int id, string content), SuffixTreeSearchIndex>.Create(elements, c => c.content);
+        var documentIndex = DocumentIndex<(int id, string content)>.Create(elements, c => c.content);
 
         var results = documentIndex.ExactSearch("2");
 
         // Assert
-        results.Should().HaveCount(1);
+        results.Should().ContainSingle();
         results.Single().Element.id.Should().Be(2);
         results.Single().Matches.Single().Position.Should().Be(62);
     }
