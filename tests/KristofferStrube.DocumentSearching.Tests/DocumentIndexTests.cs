@@ -16,7 +16,7 @@ public class DocumentIndexTests
         ];
 
         // Act
-        var documentIndex = DocumentIndex<(int id, string content), SuffixTreeSearchIndex>.Create(elements, c => c.content);
+        var documentIndex = DocumentIndex<(int id, string content), SuffixTrieSearchIndex>.Create(elements, c => c.content);
 
         var results = documentIndex.ExactSearch("mis");
 
@@ -38,7 +38,7 @@ public class DocumentIndexTests
         ];
 
         // Act
-        var documentIndex = DocumentIndex<(int id, string content), SuffixTreeSearchIndex>.Create(elements, c => c.content);
+        var documentIndex = DocumentIndex<(int id, string content), SuffixTrieSearchIndex>.Create(elements, c => c.content);
 
         var results = documentIndex.ExactSearch("!");
 
@@ -62,7 +62,7 @@ public class DocumentIndexTests
         ];
 
         // Act
-        var documentIndex = DocumentIndex<(int id, string content), SuffixTreeSearchIndex>.Create(elements, c => c.content);
+        var documentIndex = DocumentIndex<(int id, string content), SuffixTrieSearchIndex>.Create(elements, c => c.content);
 
         var results = documentIndex.ExactSearch("s");
 
@@ -81,7 +81,7 @@ public class DocumentIndexTests
         ];
 
         // Act
-        var documentIndex = DocumentIndex<(int id, string content), SuffixTreeSearchIndex>.Create(elements, c => c.content);
+        var documentIndex = DocumentIndex<(int id, string content), SuffixTrieSearchIndex>.Create(elements, c => c.content);
 
         var results = documentIndex.ExactSearch("2");
 

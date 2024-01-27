@@ -2,12 +2,12 @@ using KristofferStrube.DocumentSearching.SuffixTree;
 
 namespace KristofferStrube.DocumentSearching.Tests;
 
-public class SuffixTreeSearchIndexTests
+public class SuffixTrieSearchIndexTests
 {
     [Fact]
     public void ExactSearch_Mis_In_Mississippi()
     {
-        SuffixTreeSearchIndex st = new SuffixTreeSearchIndex("mississippi");
+        SuffixTrieSearchIndex st = new SuffixTrieSearchIndex("mississippi");
 
         int[] searchResults = st.ExactSearch("mis");
 
@@ -18,7 +18,7 @@ public class SuffixTreeSearchIndexTests
     [Fact]
     public void ExactSearch_Ppi_In_Mississippi()
     {
-        SuffixTreeSearchIndex st = new SuffixTreeSearchIndex("mississippi");
+        SuffixTrieSearchIndex st = new SuffixTrieSearchIndex("mississippi");
 
         int[] searchResults = st.ExactSearch("ppi");
 
@@ -29,7 +29,7 @@ public class SuffixTreeSearchIndexTests
     [Fact]
     public void ExactSearch_Sis_In_Mississippi()
     {
-        SuffixTreeSearchIndex st = new SuffixTreeSearchIndex("mississippi");
+        SuffixTrieSearchIndex st = new SuffixTrieSearchIndex("mississippi");
 
         int[] searchResults = st.ExactSearch("sis");
 
@@ -40,7 +40,7 @@ public class SuffixTreeSearchIndexTests
     [Fact]
     public void ExactSearch_Pip_NotIn_Mississippi()
     {
-        SuffixTreeSearchIndex st = new SuffixTreeSearchIndex("mississippi");
+        SuffixTrieSearchIndex st = new SuffixTrieSearchIndex("mississippi");
 
         int[] searchResults = st.ExactSearch("pip");
 
@@ -50,7 +50,7 @@ public class SuffixTreeSearchIndexTests
     [Fact]
     public void ExactSearch_Fork_NotIn_Mississippi()
     {
-        SuffixTreeSearchIndex st = new SuffixTreeSearchIndex("mississippi");
+        SuffixTrieSearchIndex st = new SuffixTrieSearchIndex("mississippi");
 
         int[] searchResults = st.ExactSearch("fork");
 
@@ -60,7 +60,7 @@ public class SuffixTreeSearchIndexTests
     [Fact]
     public void ExactSearch_S_In_Mississippi()
     {
-        SuffixTreeSearchIndex st = new SuffixTreeSearchIndex("mississippi");
+        SuffixTrieSearchIndex st = new SuffixTrieSearchIndex("mississippi");
 
         int[] searchResults = st.ExactSearch("s");
 

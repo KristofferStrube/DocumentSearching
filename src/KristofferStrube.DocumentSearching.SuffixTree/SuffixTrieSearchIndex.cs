@@ -3,7 +3,7 @@ using KristofferStrube.DocumentSearching.SearchTree;
 
 namespace KristofferStrube.DocumentSearching.SuffixTree;
 
-public class SuffixTreeSearchIndex : ISearchIndex<SuffixTreeSearchIndex>
+public class SuffixTrieSearchIndex : ISearchIndex<SuffixTrieSearchIndex>
 {
     public Node Root { get; init; }
     public Alphabet Alphabet { get; init; }
@@ -11,9 +11,9 @@ public class SuffixTreeSearchIndex : ISearchIndex<SuffixTreeSearchIndex>
 
     [Obsolete("Only use for serialization")]
     [JsonConstructor]
-    public SuffixTreeSearchIndex() { }
+    public SuffixTrieSearchIndex() { }
 
-    public SuffixTreeSearchIndex(string input)
+    public SuffixTrieSearchIndex(string input)
     {
         Input = Alphabet.EncodeInput(input, out Alphabet alphabet);
         Alphabet = alphabet;
@@ -26,7 +26,7 @@ public class SuffixTreeSearchIndex : ISearchIndex<SuffixTreeSearchIndex>
         }
     }
 
-    public SuffixTreeSearchIndex(string[] inputParts)
+    public SuffixTrieSearchIndex(string[] inputParts)
     {
         Input = Alphabet.EncodeInputParts(inputParts, out Alphabet alphabet);
         Alphabet = alphabet;
@@ -39,9 +39,9 @@ public class SuffixTreeSearchIndex : ISearchIndex<SuffixTreeSearchIndex>
         }
     }
 
-    public static SuffixTreeSearchIndex Create(string[] inputParts)
+    public static SuffixTrieSearchIndex Create(string[] inputParts)
     {
-        return new SuffixTreeSearchIndex(inputParts);
+        return new SuffixTrieSearchIndex(inputParts);
     }
 
     private void AddSuffix(int offset)

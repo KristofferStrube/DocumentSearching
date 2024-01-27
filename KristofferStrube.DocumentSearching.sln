@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.0.31903.59
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "KristofferStrube.DocumentSearching.SuffixTree", "src\KristofferStrube.DocumentSearching.SuffixTree\KristofferStrube.DocumentSearching.SuffixTree.csproj", "{158EF0CA-CD84-496F-9983-3A3942698804}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "KristofferStrube.DocumentSearching.SuffixTrie", "src\KristofferStrube.DocumentSearching.SuffixTree\KristofferStrube.DocumentSearching.SuffixTrie.csproj", "{158EF0CA-CD84-496F-9983-3A3942698804}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "KristofferStrube.DocumentSearching.BlazorWasm", "samples\KristofferStrube.DocumentSearching.BlazorWasm\KristofferStrube.DocumentSearching.BlazorWasm.csproj", "{0859633B-7399-4A94-A38A-F88F78A5948D}"
 EndProject

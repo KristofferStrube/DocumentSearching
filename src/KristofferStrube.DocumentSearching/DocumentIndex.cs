@@ -34,9 +34,7 @@ public class DocumentIndex<TElement, TSearchIndex> where TSearchIndex : ISearchI
         }
         TSearchIndex searchIndex = TSearchIndex.Create(elementParts);
 
-#pragma warning disable CS0618 // Type or member is obsolete
         return new(searchIndex, elements, offsets);
-#pragma warning restore CS0618 // Type or member is obsolete
     }
 
     public static DocumentIndex<TElement, TSearchIndex> Create(TElement[] elements, Func<TElement, string> elementMapper)
@@ -54,9 +52,7 @@ public class DocumentIndex<TElement, TSearchIndex> where TSearchIndex : ISearchI
         }
         TSearchIndex searchIndex = TSearchIndex.Create(elementParts);
 
-#pragma warning disable CS0618 // Type or member is obsolete
         return new(searchIndex, elements, offsets);
-#pragma warning restore CS0618 // Type or member is obsolete
     }
 
     public SearchResult<TElement>[] ExactSearch(string query)
