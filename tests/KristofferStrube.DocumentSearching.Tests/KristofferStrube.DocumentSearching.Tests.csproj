@@ -29,6 +29,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\KristofferStrube.DocumentSearching.SuffixTree\KristofferStrube.DocumentSearching.SuffixTrie.csproj" />
+    <ProjectReference Include="..\..\src\KristofferStrube.DocumentSearching\KristofferStrube.DocumentSearching.csproj" />
   </ItemGroup>
 
 </Project>
