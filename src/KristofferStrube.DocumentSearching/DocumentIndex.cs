@@ -118,6 +118,71 @@ public class DocumentIndex<TElement, TSearchIndex> where TSearchIndex : ISearchI
             k++;
         }
 
-        return matchingElements.ToArray();
+        return matchingElements;
+    }
+
+    public string[] ContinuationsSortedByOccurrences(string query, char[] breakChars, int count, bool mustBeAfterBreakChar)
+    {
+        if (breakChars.Length is 0)
+            return [];
+
+        string[] queryParts = query.Split(" ").Where(s => s.Trim() is not "").Distinct().ToArray();
+
+        if (queryParts.Length is 0)
+            return [];
+
+        List<int> firstMatches = new();
+
+        for(int i = 0; i < queryParts.Length - 1; i++)
+        {
+            string queryPart = queryParts[i];
+
+            firstMatches.AddRange(SearchIndex.ExactSearch(queryPart));
+        }
+
+        int[] lastMatches = SearchIndex.ExactSearch(queryParts[^1]);
+
+        Dictionary<string, int> firstContinutions = CountedContinuations(firstMatches, queryParts, breakChars, mustBeAfterBreakChar);
+        Dictionary<string, int> lastContinutions = CountedContinuations(lastMatches, queryParts, breakChars, mustBeAfterBreakChar);
+
+        return lastContinutions
+            .OrderByDescending(kvp => kvp.Value)
+            .Select(kvp => kvp.Key)
+            .Take(count)
+            .Concat(firstContinutions
+                .OrderByDescending(kvp => kvp.Value)
+                .Select(kvp => kvp.Key)
+                .Take(Math.Max(0, count - lastContinutions.Count))
+            ).ToArray();
+    }
+
+    private Dictionary<string, int> CountedContinuations(IEnumerable<int> matches, string[] queryParts, char[] breakChar, bool mustBeAfterBreakChar)
+    {
+        Dictionary<string, int> continutions = new();
+
+        foreach(int match in matches)
+        {
+            string continuation = SearchIndex.Continuation(from: match, until: breakChar, out bool previousCharIsPartOfUntil);
+
+            if (queryParts.Contains(continuation))
+                continue;
+
+            if (mustBeAfterBreakChar && !previousCharIsPartOfUntil)
+                continue;
+
+            if (continuation.Length is 0)
+                continue;
+
+            if (continutions.ContainsKey(continuation))
+            {
+                continutions[continuation]++;
+            }
+            else
+            {
+                continutions[continuation] = 1;
+            }
+        }
+
+        return continutions;
     }
 }

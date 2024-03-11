@@ -154,4 +154,24 @@ public class SuffixTrieSearchIndex : ISearchIndex<SuffixTrieSearchIndex>
 
         return offsets;
     }
+
+    public string Continuation(int from, char[] breakChars, out bool previousCharIsPartOfUntil)
+    {
+        int[] encodedBreakChars = new int[breakChars.Length + 1];
+
+        for (int i = 0; i < breakChars.Length; i++)
+        {
+            encodedBreakChars[i] = Alphabet.EncodeMap.TryGetValue(breakChars[i], out int encoded) ? encoded : 0;
+        }
+
+        int index = from;
+        while (!encodedBreakChars.Contains(Input[index]))
+        {
+            index++;
+        }
+
+        previousCharIsPartOfUntil = from is 0 || encodedBreakChars.Contains(Input[from - 1]);
+
+        return new string(Input[from..index].Select(e => Alphabet.DecodeMap[e]).ToArray());
+    }
 }

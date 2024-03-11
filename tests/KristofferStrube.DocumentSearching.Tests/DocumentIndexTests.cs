@@ -90,4 +90,26 @@ public class DocumentIndexTests
         results.Single().Element.id.Should().Be(2);
         results.Single().Matches.Single().Position.Should().Be(62);
     }
+
+    [Fact]
+    public void Predictions_ShowsContinuationWithMostOccurrences()
+    {
+        // Arrange
+        (int id, string content)[] elements = [
+            (1, "PageRank (PR) is an algorithm used by Google Search to rank web pages in their search engine results. It is named after both the term \"web page\" and co-founder Larry Page. PageRank is a way of measuring the importance of website pages."),
+            (2, "PageRank works by counting the number and quality of links to a page to determine a rough estimate of how important the website is. The underlying assumption is that more important websites are likely to receive more links from other websites."),
+            (3, "Currently, PageRank is not the only algorithm used by Google to order search results, but it is the first algorithm that was used by the company, and it is the best known. As of September 24, 2019, all patents associated with PageRank have expired."),
+            (4, "PageRank is a link analysis algorithm and it assigns a numerical weighting to each element of a hyperlinked set of documents, such as the World Wide Web, with the purpose of \"measuring\" its relative importance within the set."),
+        ];
+
+        // Act
+        var documentIndex = DocumentIndex<(int id, string content), SuffixTrieSearchIndex>.Create(elements, c => c.content.ToLower());
+
+        var results = documentIndex.ContinuationsSortedByOccurrences("pag", [' ', '.', '"'], 10, mustBeAfterBreakChar: false);
+
+        // Assert
+        results.Should().HaveCount(3);
+        results[0].Should().Be("pagerank");
+        results[1].Should().Be("page");
+    }
 }

@@ -23,6 +23,7 @@
 @if (searchTime is not null && naive is not null)
 {
     <p>Found @searchResults.Length @(searchResults.Length is 1 ? "element" : "elements") in @Math.Round(searchTime.Value, 2) ms compared to a simple IndexOf search in @Math.Round(naive.Value, 2) ms.</p>
+    <p>Continuations of search query: @string.Join(", ", continuations)</p>
 }
 
 @foreach (SearchResult<Element> result in searchResults)
@@ -62,9 +63,9 @@
     private double? naive;
     private Element[] elements = default!;
     private SearchResult<Element>[] searchResults = [];
+    private string[] continuations = [];
 
     private DocumentIndex<Element, SuffixTrieSearchIndex> index = default!;
-    private int indexingProgress = 0;
 
     private string query = "";
 
@@ -79,7 +80,7 @@
         index = DocumentIndex<Element, SuffixTrieSearchIndex>.Create(elements, e => e.Summary.ToLower());
     }
 
-    public async Task Search()
+    public void Search()
     {
         if (query is "")
         {
@@ -91,6 +92,7 @@
         Stopwatch sw = Stopwatch.StartNew();
         searchResults = index.ExactSearch(query.ToLower());
         searchTime = sw.ElapsedTicks / (double)1_000_000;
+        continuations = index.ContinuationsSortedByOccurrences(query.ToLower(), [' ', '"', '-', '.', ','], 10, mustBeAfterBreakChar: true);
 
         sw = Stopwatch.StartNew();
         foreach (string queryPart in query.Split(" ").Where(s => s.Trim().Length is not 0))
