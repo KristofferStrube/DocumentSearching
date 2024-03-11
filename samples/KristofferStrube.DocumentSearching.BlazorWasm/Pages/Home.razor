@@ -11,7 +11,8 @@
 
 <h1>Search</h1>
 <p>
-    Here you can search through all the elements in the periodic table using an in-memory search index.<br />
+    Here you can search through all the elements in the periodic table using an in-memory search index.
+    <br />
     <small>Try seaching "lightest chemical substance" to find Hydrogen.</small>
 </p>
 @if (index is null)
@@ -23,7 +24,8 @@
 @if (searchTime is not null && naive is not null)
 {
     <p>Found @searchResults.Length @(searchResults.Length is 1 ? "element" : "elements") in @Math.Round(searchTime.Value, 2) ms compared to a simple IndexOf search in @Math.Round(naive.Value, 2) ms.</p>
-    <p>Continuations of search query: @string.Join(", ", continuations)</p>
+    <br />
+    <small>Continuations of search query: @string.Join(", ", continuations)</small>
 }
 
 @foreach (SearchResult<Element> result in searchResults)
@@ -92,7 +94,7 @@
         Stopwatch sw = Stopwatch.StartNew();
         searchResults = index.ExactSearch(query.ToLower());
         searchTime = sw.ElapsedTicks / (double)1_000_000;
-        continuations = index.ContinuationsSortedByOccurrences(query.ToLower(), [' ', '"', '-', '.', ','], 10, mustBeAfterBreakChar: true);
+        continuations = index.ContinuationsSortedByOccurrences(query.ToLower(), [' ', '"', '-', '.', ',', '\\', '(', ')'], 10, mustBeAfterBreakChar: true);
 
         sw = Stopwatch.StartNew();
         foreach (string queryPart in query.Split(" ").Where(s => s.Trim().Length is not 0))
