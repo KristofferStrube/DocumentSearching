@@ -97,13 +97,19 @@
         continuations = index.ContinuationsSortedByOccurrences(query.ToLower(), [' ', '"', '-', '.', ',', '\\', '(', ')'], 10, mustBeAfterBreakChar: true);
 
         sw = Stopwatch.StartNew();
-        foreach (string queryPart in query.Split(" ").Where(s => s.Trim().Length is not 0))
-        {
-            foreach (var element in elements)
-            {
-                NaiveStringSearch(element.Summary.ToLower(), queryPart.ToLower());
-            }
-        }
+        elements
+            .Select(element =>
+                (
+                    score: query
+                        .Split(" ")
+                        .Where(s => s.Trim().Length is not 0)
+                        .Sum(queryPart => NaiveStringSearch(element.Summary.ToLower(), queryPart.ToLower()).Count),
+                    element: element
+                ))
+            .Where(tuple => tuple.score > 0)
+            .OrderByDescending(tuple => tuple.score)
+            .Select(tuple => tuple.element)
+            .ToArray();
         naive = sw.ElapsedTicks / (double)1_000_000;
     }
 
@@ -112,13 +118,19 @@
         if (String.IsNullOrEmpty(value))
             throw new ArgumentException("the string to find may not be empty", "value");
         List<int> indexes = new List<int>();
-        for (int index = 0; ; index += value.Length)
+
+        int index = 0;
+        while (true)
         {
             index = str.IndexOf(value, index);
             if (index == -1)
-                return indexes;
+            {
+                break;
+            }
+            index++;
             indexes.Add(index);
         }
+        return indexes;
     }
 
     public class Element
