@@ -10,9 +10,9 @@
 
 <h1>Search</h1>
 <p>
-    Here you can search through all the elements in the periodic table using an in-memory search index.
+    Here you can try out a fuzzy search through all the elements in the periodic table using an in-memory search index.
     <br />
-    <small>Try seaching "lightest chemical substance" to find Hydrogen.</small>
+    <small>Try seaching "lightest chemical substance" to find Hydrogen. Try to springle in some spelling errors.</small>
 </p>
 @if (index is null)
 {
@@ -38,7 +38,7 @@
             if (result.Matches.FirstOrDefault(m => i == m.Position) is { } match && match.Length is not 0)
             {
                 int offset = 0;
-                for (int j = 0; j < match.ExpandedCigar.Length; j++)
+                for (int j = 0; j < match.ExpandedCigar.Length && i + j + offset < result.Element.Summary.Length; j++)
                 {
                     if (match.ExpandedCigar[j] is EditType.Match)
                     {

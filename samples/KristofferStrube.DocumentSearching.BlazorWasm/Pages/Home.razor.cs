@@ -41,7 +41,7 @@ namespace KristofferStrube.DocumentSearching.BlazorWasm.Pages
             }
 
             Stopwatch sw = Stopwatch.StartNew();
-            searchResults = index.ApproximateSearch(query.ToLower(), 1);
+            searchResults = index.ApproximateSearch(query.ToLower(), 2);
             searchTime = sw.ElapsedTicks / (double)1_000_000;
             continuations = index.ContinuationsSortedByOccurrences(query.ToLower(), [' ', '"', '-', '.', ',', '\\', '(', ')'], 10, mustBeAfterBreakChar: true);
 

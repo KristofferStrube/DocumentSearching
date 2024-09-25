@@ -124,7 +124,7 @@ public class DocumentIndex<TElement, TSearchIndex> where TSearchIndex : ISearchI
         return matchingElements;
     }
 
-    public SearchResult<TElement>[] ApproximateSearch(string query, int edits, int thresholdForUsingApproximate = 3)
+    public SearchResult<TElement>[] ApproximateSearch(string query, int edits, int thresholdForUsingApproximate = 4)
     {
         string[] queryParts = query.Split(" ").Where(s => s.Trim() is not "").Distinct().ToArray();
 
@@ -140,7 +140,7 @@ public class DocumentIndex<TElement, TSearchIndex> where TSearchIndex : ISearchI
             partBuckets[q] = buckets;
 
             string queryPart = queryParts[q];
-            ApproximateMatch[] results = SearchIndex.ApproximateSearch(queryPart, queryPart.Length > thresholdForUsingApproximate ? edits : 0);
+            ApproximateMatch[] results = SearchIndex.ApproximateSearch(queryPart, queryPart.Length >= thresholdForUsingApproximate ? edits : 0);
 
             for (int i = 0; i < results.Length; i++)
             {
