@@ -139,18 +139,17 @@ public class DocumentIndexTests
     {
         // Arrange
         (int id, string content)[] elements = [
-            (1, """change""".ToLower()),
-            (2, """channel""".ToLower()),
-            (3, """filter""".ToLower())
+            (1, """channel""".ToLower()),
+            (2, """change""".ToLower())
         ];
 
         // Act
         var documentIndex = DocumentIndex<(int id, string content), SuffixTrieSearchIndex>.Create(elements, c => c.content);
 
-        var results = documentIndex.ApproximateSearch("chanel", 1);
+        var results = documentIndex.ApproximateSearch("chanel", 1, 0);
 
         // Assert
         results.Should().HaveCount(1);
-        results.First().Element.id.Should().Be(2);
+        results.First().Element.id.Should().Be(1);
     }
 }

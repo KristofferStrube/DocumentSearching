@@ -4,7 +4,6 @@
 @using CsvHelper.Configuration.Attributes
 @using KristofferStrube.DocumentSearching.SuffixTree
 @using System.Diagnostics
-@using System.Text.RegularExpressions
 @inject HttpClient HttpClient
 
 <PageTitle>DocumentSearching - Search</PageTitle>
@@ -30,6 +29,7 @@
 
 @foreach (SearchResult<Element> result in searchResults)
 {
+    List<Match> markedAreas = [];
     <div @key=result.Element>
         <hr />
         <h3>@result.Element.Name</h3>
@@ -37,7 +37,26 @@
         {
             if (result.Matches.FirstOrDefault(m => i == m.Position) is { } match && match.Length is not 0)
             {
-                <span style="background-color:lightgreen;">@result.Element.Summary[i..(i + match.Length)]</span>
+                int offset = 0;
+                for (int j = 0; j < match.ExpandedCigar.Length; j++)
+                {
+                    if (match.ExpandedCigar[j] is EditType.Match)
+                    {
+                        <span style="background-color:#9F9;">@result.Element.Summary[i + j + offset]</span>
+                    }
+                    else if (match.ExpandedCigar[j] is EditType.MisMatch)
+                    {
+                        <span style="background-color:#EE9;">@result.Element.Summary[i + j + offset]</span>
+                    }
+                    else if (match.ExpandedCigar[j] is EditType.Insert)
+                    {
+                        <span style="background-color:#EE9;">@result.Element.Summary[i + j + offset]</span>
+                    }
+                    else if (match.ExpandedCigar[j] is EditType.Delete)
+                    {
+                        offset--;
+                    }
+                }
                 i += match.Length - 1;
             }
             else

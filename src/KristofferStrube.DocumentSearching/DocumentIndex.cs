@@ -186,7 +186,7 @@ public class DocumentIndex<TElement, TSearchIndex> where TSearchIndex : ISearchI
 
         int k = 0;
         foreach (int key in combinedBuckets.Keys
-            .OrderByDescending(k => combinedBuckets[k].Sum(m => edits - m.Edits)))
+            .OrderByDescending(k => combinedBuckets[k].Sum(m => 1 + edits - m.Edits)))
         {
             matchingElements[k] = new(Elements[key], combinedBuckets[key].OrderBy(m => m.Edits).ThenBy(m => m.Position).ToArray());
             k++;

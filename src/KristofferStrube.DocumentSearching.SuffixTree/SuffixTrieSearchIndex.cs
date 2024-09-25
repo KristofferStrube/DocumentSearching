@@ -149,10 +149,10 @@ public class SuffixTrieSearchIndex : ISearchIndex<SuffixTrieSearchIndex>
         List<ApproximateMatch> results = [];
 
         Stack<EditSubTree> editTree = new();
-        editTree.Push(new(Root, 0, [], 0, edits, 0));
+        editTree.Push(new(Root, 0, [], 0, edits));
         while (editTree.TryPop(out EditSubTree subTree))
         {
-            (Node node, int offset, List<EditType> expandedGigar, int offsetInQuery, int editsLeft, int matchOffset) = subTree;
+            (Node node, int offset, List<EditType> expandedGigar, int offsetInQuery, int editsLeft) = subTree;
 
             if (offset > node.To - node.From)
             {
@@ -174,7 +174,7 @@ public class SuffixTrieSearchIndex : ISearchIndex<SuffixTrieSearchIndex>
                         continue;
                     }
 
-                    results.Add(new(match + matchOffset, expandedGigar.ToArray(), edits - editsLeft));
+                    results.Add(new(match, expandedGigar.ToArray(), edits - editsLeft));
                 }
                 continue;
             }
@@ -184,7 +184,7 @@ public class SuffixTrieSearchIndex : ISearchIndex<SuffixTrieSearchIndex>
                 int encodedCharacter = encodedQuery[offsetInQuery];
                 if (encodedCharacter > -1 && node.Children[encodedCharacter] is { } matchingChild)
                 {
-                    editTree.Push(new(matchingChild, 1, [.. expandedGigar, EditType.Match], offsetInQuery + 1, editsLeft, matchOffset));
+                    editTree.Push(new(matchingChild, 1, [.. expandedGigar, EditType.Match], offsetInQuery + 1, editsLeft));
                 }
                 if (editsLeft is not 0)
                 {
@@ -195,28 +195,28 @@ public class SuffixTrieSearchIndex : ISearchIndex<SuffixTrieSearchIndex>
                             continue;
                         }
 
-                        editTree.Push(new(child, 0, [.. expandedGigar, EditType.Insert], offsetInQuery, editsLeft - 1, node == Root ? -1 : matchOffset));
-                        editTree.Push(new(child, 1, [.. expandedGigar, EditType.MisMatch], offsetInQuery + 1, editsLeft - 1, matchOffset));
+                        editTree.Push(new(child, 1, [.. expandedGigar, EditType.Insert], offsetInQuery, editsLeft - 1));
+                        editTree.Push(new(child, 1, [.. expandedGigar, EditType.MisMatch], offsetInQuery + 1, editsLeft - 1));
                     }
-                    editTree.Push(new(node, offset, [.. expandedGigar, EditType.Delete], offsetInQuery + 1, editsLeft - 1, matchOffset));
+                    editTree.Push(new(node, offset, [.. expandedGigar, EditType.Delete], offsetInQuery + 1, editsLeft - 1));
                 }
             }
             else if (Input[node.From + offset] == encodedQuery[offsetInQuery]) // We are not at the end of a line but we match.
             {
-                editTree.Push(new(node, offset + 1, [.. expandedGigar, EditType.Match], offsetInQuery + 1, editsLeft, matchOffset));
+                editTree.Push(new(node, offset + 1, [.. expandedGigar, EditType.Match], offsetInQuery + 1, editsLeft));
             }
             else if (editsLeft is not 0) // We are not at the end of a line, but we don't match.
             {
-                editTree.Push(new(node, offset + 1, [.. expandedGigar, EditType.MisMatch], offsetInQuery + 1, editsLeft - 1, matchOffset));
-                editTree.Push(new(node, offset + 1, [.. expandedGigar, EditType.Insert], offsetInQuery, editsLeft - 1, matchOffset));
-                editTree.Push(new(node, offset, [.. expandedGigar, EditType.Delete], offsetInQuery + 1, editsLeft - 1, matchOffset));
+                editTree.Push(new(node, offset + 1, [.. expandedGigar, EditType.MisMatch], offsetInQuery + 1, editsLeft - 1));
+                editTree.Push(new(node, offset + 1, [.. expandedGigar, EditType.Insert], offsetInQuery, editsLeft - 1));
+                editTree.Push(new(node, offset, [.. expandedGigar, EditType.Delete], offsetInQuery + 1, editsLeft - 1));
             }
         }
 
         return results.Distinct().ToArray();
     }
 
-    private readonly record struct EditSubTree(Node node, int offset, List<EditType> expandedGigar, int offsetInQuery, int editsLeft, int matchOffset);
+    private readonly record struct EditSubTree(Node node, int offset, List<EditType> expandedGigar, int offsetInQuery, int editsLeft);
 
     private List<int> GetOffsetsForSubtree(Node node)
     {
