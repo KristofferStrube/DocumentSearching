@@ -179,11 +179,6 @@ public class SuffixTrieSearchIndex : ISearchIndex<SuffixTrieSearchIndex>
                 continue;
             }
 
-            if (Input[node.From + offset] is 0) // If we have reached an sentinel then we should not continue.
-            {
-                continue;
-            }    
-
             if (offset == node.To - node.From) // We are at the end of a line.
             {
                 int encodedCharacter = encodedQuery[offsetInQuery];
