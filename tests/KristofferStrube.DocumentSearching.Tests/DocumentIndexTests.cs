@@ -139,14 +139,33 @@ public class DocumentIndexTests
     {
         // Arrange
         (int id, string content)[] elements = [
-            (1, """channel""".ToLower()),
-            (2, """change""".ToLower())
+            (1, "channel"),
+            (2, "change")
         ];
 
         // Act
         var documentIndex = DocumentIndex<(int id, string content), SuffixTrieSearchIndex>.Create(elements, c => c.content);
 
         var results = documentIndex.ApproximateSearch("chanel", 1, 0);
+
+        // Assert
+        results.Should().HaveCount(1);
+        results.First().Element.id.Should().Be(1);
+    }
+
+    [Fact]
+    public void ApproximateMatch_TermWithExpandedTermPresentAsWell()
+    {
+        // Arrange
+        (int id, string content)[] elements = [
+            (2, "productdatadoublevaluefacetresult"),
+            (1, "productdatafilter"),
+        ];
+
+        // Act
+        var documentIndex = DocumentIndex<(int id, string content), SuffixTrieSearchIndex>.Create(elements, c => c.content);
+
+        var results = documentIndex.ApproximateSearch("productdatafilter", 1, 0);
 
         // Assert
         results.Should().HaveCount(1);

@@ -154,12 +154,12 @@ public class SuffixTrieSearchIndex : ISearchIndex<SuffixTrieSearchIndex>
         {
             (Node node, int offset, List<EditType> expandedGigar, int offsetInQuery, int editsLeft) = subTree;
 
-            if (offset > node.To - node.From)
+            if (offset > node.To - node.From) // We have reached an offset outside the length of the current edge.
             {
                 continue;
             }
 
-            if (node.From + offset == Input.Length)
+            if (node.From + offset == Input.Length) // We have reacted the end of the input somehow.
             {
                 continue;
             }
@@ -179,6 +179,11 @@ public class SuffixTrieSearchIndex : ISearchIndex<SuffixTrieSearchIndex>
                 continue;
             }
 
+            if (Input[node.From + offset] is 0) // If we have reached an sentinel then we should not continue.
+            {
+                continue;
+            }    
+
             if (offset == node.To - node.From) // We are at the end of a line.
             {
                 int encodedCharacter = encodedQuery[offsetInQuery];
@@ -195,7 +200,10 @@ public class SuffixTrieSearchIndex : ISearchIndex<SuffixTrieSearchIndex>
                             continue;
                         }
 
-                        editTree.Push(new(child, 1, [.. expandedGigar, EditType.Insert], offsetInQuery, editsLeft - 1));
+                        if (Input[child.From] is not 0) // We should not continue if this child is starting with a sentinel.
+                        {
+                            editTree.Push(new(child, 1, [.. expandedGigar, EditType.Insert], offsetInQuery, editsLeft - 1));
+                        }
                         editTree.Push(new(child, 1, [.. expandedGigar, EditType.MisMatch], offsetInQuery + 1, editsLeft - 1));
                     }
                     editTree.Push(new(node, offset, [.. expandedGigar, EditType.Delete], offsetInQuery + 1, editsLeft - 1));
