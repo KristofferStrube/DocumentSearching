@@ -133,4 +133,24 @@ public class DocumentIndexTests
         results[0].Should().Be("pagerank");
         results[1].Should().Be("page");
     }
+
+    [Fact]
+    public void ApproximateMatch_Channel_In_Types()
+    {
+        // Arrange
+        (int id, string content)[] elements = [
+            (1, """change""".ToLower()),
+            (2, """channel""".ToLower()),
+            (3, """filter""".ToLower())
+        ];
+
+        // Act
+        var documentIndex = DocumentIndex<(int id, string content), SuffixTrieSearchIndex>.Create(elements, c => c.content);
+
+        var results = documentIndex.ApproximateSearch("chanel", 1);
+
+        // Assert
+        results.Should().HaveCount(1);
+        results.First().Element.id.Should().Be(2);
+    }
 }
