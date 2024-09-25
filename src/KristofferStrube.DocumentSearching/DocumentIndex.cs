@@ -62,6 +62,7 @@ public class DocumentIndex<TElement, TSearchIndex> where TSearchIndex : ISearchI
         if (queryParts.Length is 0)
             return []; 
 
+        // We search for each individual search result.
         Dictionary<int, List<Match>>[] partBuckets = new Dictionary<int, List<Match>>[queryParts.Length];
 
         for (int q = 0; q < queryParts.Length; q++)
@@ -94,6 +95,7 @@ public class DocumentIndex<TElement, TSearchIndex> where TSearchIndex : ISearchI
             }
         }
 
+        // We group the results by how many matches they have.
         Dictionary<int, List<Match>> combinedBuckets = partBuckets.First();
 
         foreach (Dictionary<int, List<Match>> buckets in partBuckets.Skip(1))
@@ -109,12 +111,84 @@ public class DocumentIndex<TElement, TSearchIndex> where TSearchIndex : ISearchI
             combinedBuckets = temporaryBucket;
         }
 
+        // We create the result array sorted by they occurences.
         SearchResult<TElement>[] matchingElements = new SearchResult<TElement>[combinedBuckets.Count];
 
         int k = 0;
         foreach (int key in combinedBuckets.Keys.OrderByDescending(k => combinedBuckets[k].Count))
         {
             matchingElements[k] = new(Elements[key], combinedBuckets[key].OrderBy(m => m.Position).ToArray());
+            k++;
+        }
+
+        return matchingElements;
+    }
+
+    public SearchResult<TElement>[] ApproximateSearch(string query, int edits, int thresholdForUsingApproximate = 3)
+    {
+        string[] queryParts = query.Split(" ").Where(s => s.Trim() is not "").Distinct().ToArray();
+
+        if (queryParts.Length is 0)
+            return [];
+
+        // We search for each individual search result.
+        Dictionary<int, List<Match>>[] partBuckets = new Dictionary<int, List<Match>>[queryParts.Length];
+
+        for (int q = 0; q < queryParts.Length; q++)
+        {
+            Dictionary<int, List<Match>> buckets = new();
+            partBuckets[q] = buckets;
+
+            string queryPart = queryParts[q];
+            ApproximateMatch[] results = SearchIndex.ApproximateSearch(queryPart, queryPart.Length > thresholdForUsingApproximate ? edits : 0);
+
+            for (int i = 0; i < results.Length; i++)
+            {
+                ApproximateMatch result = results[i];
+                for (int j = 0; j < Offsets.Length; j++)
+                {
+                    if (j == Offsets.Length - 1 || result.Position < Offsets[j + 1])
+                    {
+                        Match match = new Match(result.Position - Offsets[j], result.ExpandedGigar, result.Edits);
+                        if (buckets.TryGetValue(j, out List<Match>? matches))
+                        {
+                            matches.Add(match);
+                        }
+                        else
+                        {
+                            matches = [match];
+                            buckets.Add(j, matches);
+                        }
+                        break;
+                    }
+                }
+            }
+        }
+
+        // We group the results by how many matches they have.
+        Dictionary<int, List<Match>> combinedBuckets = partBuckets.First();
+
+        foreach (Dictionary<int, List<Match>> buckets in partBuckets.Skip(1))
+        {
+            Dictionary<int, List<Match>> temporaryBucket = new();
+            foreach (int key in buckets.Keys)
+            {
+                if (combinedBuckets.ContainsKey(key) && buckets.ContainsKey(key))
+                {
+                    temporaryBucket.Add(key, combinedBuckets[key].Concat(buckets[key]).ToList());
+                }
+            }
+            combinedBuckets = temporaryBucket;
+        }
+
+        // We create the result array sorted by they occurences.
+        SearchResult<TElement>[] matchingElements = new SearchResult<TElement>[combinedBuckets.Count];
+
+        int k = 0;
+        foreach (int key in combinedBuckets.Keys
+            .OrderByDescending(k => combinedBuckets[k].Sum(m => edits - m.Edits)))
+        {
+            matchingElements[k] = new(Elements[key], combinedBuckets[key].OrderBy(m => m.Edits).ThenBy(m => m.Position).ToArray());
             k++;
         }
 

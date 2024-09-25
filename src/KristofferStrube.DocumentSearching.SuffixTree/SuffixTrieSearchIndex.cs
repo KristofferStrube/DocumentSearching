@@ -1,5 +1,7 @@
 ﻿using System.Text.Json.Serialization;
+
 using KristofferStrube.DocumentSearching.SearchTree;
+using KristofferStrube.DocumentSearching.SuffixTrie;
 
 namespace KristofferStrube.DocumentSearching.SuffixTree;
 
@@ -103,10 +105,18 @@ public class SuffixTrieSearchIndex : ISearchIndex<SuffixTrieSearchIndex>
             int character = encodedQuery[s];
             if (x == currentNode?.To)
             {
-                currentNode = currentNode.Children[encodedQuery[s]];
-                if (currentNode is null)
+                int encodedCharacter = encodedQuery[s];
+                if (encodedCharacter == -1)
                 {
                     return [];
+                }
+                else
+                {
+                    currentNode = currentNode.Children[encodedCharacter];
+                    if (currentNode is null)
+                    {
+                        return [];
+                    }
                 }
                 x = currentNode.From;
                 continue;
@@ -126,6 +136,87 @@ public class SuffixTrieSearchIndex : ISearchIndex<SuffixTrieSearchIndex>
 
         return GetOffsetsForSubtree(currentNode).ToArray();
     }
+
+    public ApproximateMatch[] ApproximateSearch(string query, int edits)
+    {
+        int[]? encodedQuery = Alphabet.EncodeQuery(query);
+
+        if (encodedQuery is null)
+        {
+            return [];
+        }
+
+        List<ApproximateMatch> results = [];
+
+        Stack<EditSubTree> editTree = new();
+        editTree.Push(new(Root, 0, [], 0, edits, 0));
+        while (editTree.TryPop(out EditSubTree subTree))
+        {
+            (Node node, int offset, List<EditType> expandedGigar, int offsetInQuery, int editsLeft, int matchOffset) = subTree;
+
+            if (offset > node.To - node.From)
+            {
+                continue;
+            }
+
+            if (node.From + offset == Input.Length)
+            {
+                continue;
+            }
+
+            if (offsetInQuery == encodedQuery.Length)
+            {
+                List<int> matches = GetOffsetsForSubtree(node);
+                foreach (int match in matches)
+                {
+                    if (match == Input.Length - 1) // We don't want to match on the sentinel in case the input was deleted.
+                    {
+                        continue;
+                    }
+
+                    results.Add(new(match + matchOffset, expandedGigar.ToArray(), edits - editsLeft));
+                }
+                continue;
+            }
+
+            if (offset == node.To - node.From) // We are at the end of a line.
+            {
+                int encodedCharacter = encodedQuery[offsetInQuery];
+                if (encodedCharacter > -1 && node.Children[encodedCharacter] is { } matchingChild)
+                {
+                    editTree.Push(new(matchingChild, 1, [.. expandedGigar, EditType.Match], offsetInQuery + 1, editsLeft, matchOffset));
+                }
+                if (editsLeft is not 0)
+                {
+                    foreach (Node? child in node.Children)
+                    {
+                        if (child is null)
+                        {
+                            continue;
+                        }
+
+                        editTree.Push(new(child, 0, [.. expandedGigar, EditType.Insert], offsetInQuery, editsLeft - 1, node == Root ? -1 : matchOffset));
+                        editTree.Push(new(child, 1, [.. expandedGigar, EditType.MisMatch], offsetInQuery + 1, editsLeft - 1, matchOffset));
+                    }
+                    editTree.Push(new(node, offset, [.. expandedGigar, EditType.Delete], offsetInQuery + 1, editsLeft - 1, matchOffset));
+                }
+            }
+            else if (Input[node.From + offset] == encodedQuery[offsetInQuery]) // We are not at the end of a line but we match.
+            {
+                editTree.Push(new(node, offset + 1, [.. expandedGigar, EditType.Match], offsetInQuery + 1, editsLeft, matchOffset));
+            }
+            else if (editsLeft is not 0) // We are not at the end of a line, but we don't match.
+            {
+                editTree.Push(new(node, offset + 1, [.. expandedGigar, EditType.MisMatch], offsetInQuery + 1, editsLeft - 1, matchOffset));
+                editTree.Push(new(node, offset + 1, [.. expandedGigar, EditType.Insert], offsetInQuery, editsLeft - 1, matchOffset));
+                editTree.Push(new(node, offset, [.. expandedGigar, EditType.Delete], offsetInQuery + 1, editsLeft - 1, matchOffset));
+            }
+        }
+
+        return results.Distinct().ToArray();
+    }
+
+    private readonly record struct EditSubTree(Node node, int offset, List<EditType> expandedGigar, int offsetInQuery, int editsLeft, int matchOffset);
 
     private List<int> GetOffsetsForSubtree(Node node)
     {

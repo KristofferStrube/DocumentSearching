@@ -103,7 +103,7 @@ public class Alphabet
             }
             else
             {
-                return null;
+                encoded[i] = -1; // We insert an -1 which can't match on anything if we could not encode a value
             }
         }
         return encoded;

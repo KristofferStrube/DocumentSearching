@@ -1,7 +1,5 @@
 ﻿using System.Text.Json.Serialization;
 
-using KristofferStrube.DocumentSearching.SearchTree;
-
 namespace KristofferStrube.DocumentSearching.SuffixTree;
 
 public class Node
