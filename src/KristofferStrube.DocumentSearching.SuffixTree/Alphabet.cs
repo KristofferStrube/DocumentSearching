@@ -1,5 +1,7 @@
 ﻿using System.Text.Json.Serialization;
 
+using KristofferStrube.DocumentSearching.SuffixTree;
+
 namespace KristofferStrube.DocumentSearching.SearchTree;
 
 public class Alphabet
@@ -64,12 +66,10 @@ public class Alphabet
         int[] encodedInput = new int[sumPartLengths];
 
         int x = 0;
-        for (int j = 0; j < inputParts.Length; j++)
+        foreach (var input in inputParts)
         {
-            string input = inputParts[j];
-            for (int i = 0; i < input.Length; i++)
+            foreach (var currentCharacter in input)
             {
-                char currentCharacter = input[i];
                 if (characters.Add(currentCharacter))
                 {
                     encodedInput[x] = encodeIndex;
@@ -92,20 +92,36 @@ public class Alphabet
         return encodedInput.ToArray();
     }
 
-    public int[]? EncodeQuery(string query)
+    public int[] EncodeQuery(string query) =>
+        query
+            .Select(x => EncodeMap.GetValueOrDefault(x, -1))
+            .ToArray();
+
+    public List<int> GetOffsetsForSubtree(Node node)
     {
-        int[] encoded = new int[query.Length];
-        for (int i = 0; i < query.Length; i++)
+        List<int> offsets = [];
+
+        Stack<Node> nodesToVisit = new();
+        nodesToVisit.Push(node);
+
+        while (nodesToVisit.TryPop(out Node? currentNode))
         {
-            if (EncodeMap.TryGetValue(query[i], out int encodedValue))
+            if (currentNode.Label is { } label)
             {
-                encoded[i] = encodedValue;
+                offsets.Add(label);
             }
             else
             {
-                encoded[i] = -1; // We insert an -1 which can't match on anything if we could not encode a value
+                for (int i = 0; i < Size; i++)
+                {
+                    if (currentNode.Children.Length > i && currentNode.Children[i] is { } existingChild)
+                    {
+                        nodesToVisit.Push(existingChild);
+                    }
+                }
             }
         }
-        return encoded;
+
+        return offsets;
     }
 }

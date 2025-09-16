@@ -7,9 +7,9 @@ namespace KristofferStrube.DocumentSearching.SuffixTree;
 
 public class SuffixTrieSearchIndex : ISearchIndex<SuffixTrieSearchIndex>
 {
-    public Node Root { get; init; }
-    public Alphabet Alphabet { get; init; }
-    public int[] Input { get; init; }
+    private Node Root { get; init; }
+    private Alphabet Alphabet { get; init; }
+    private int[] Input { get; init; }
 
     [Obsolete("Only use for serialization")]
     [JsonConstructor]
@@ -90,163 +90,192 @@ public class SuffixTrieSearchIndex : ISearchIndex<SuffixTrieSearchIndex>
 
     public int[] ExactSearch(string query)
     {
-        int[]? encodedQuery = Alphabet.EncodeQuery(query);
+        var quer = new Query(Alphabet.EncodeQuery(query));
 
-        if (encodedQuery is null)
-        {
-            return [];
-        }
-
-        Node? currentNode = Root;
+        Node currentNode = Root;
         int s = 0;
         int x = 0;
-        while (s < encodedQuery.Length)
+        while (s < quer.Length())
         {
-            int character = encodedQuery[s];
-            if (x == currentNode?.To)
-            {
-                int encodedCharacter = encodedQuery[s];
-                if (encodedCharacter == -1)
-                {
-                    return [];
-                }
-                else
-                {
-                    currentNode = currentNode.Children[encodedCharacter];
-                    if (currentNode is null)
-                    {
-                        return [];
-                    }
-                }
-                x = currentNode.From;
-                continue;
-            }
-            if (character != Input[x])
+            if (currentNode.Match(x) && quer.TheEnd(s))
             {
                 return [];
             }
 
-            s++;
-            x++;
-        }
-        if (currentNode is null)
-        {
-            return [];
-        }
+            if (!currentNode.Match(x) && !quer.Match(Input, s, x))
+            {
+                return [];
+            }
 
-        return GetOffsetsForSubtree(currentNode).ToArray();
+            if (currentNode.Match(x))
+            {
+                currentNode = quer.GetNode(currentNode, s);
+                x = currentNode.From;
+            }
+            else
+            {
+                s++;
+                x++;
+            }
+        }
+        return Alphabet.GetOffsetsForSubtree(currentNode).ToArray();
     }
 
     public ApproximateMatch[] ApproximateSearch(string query, int edits)
     {
-        int[]? encodedQuery = Alphabet.EncodeQuery(query);
-
-        if (encodedQuery is null)
-        {
-            return [];
-        }
+        int[] encodedQuery = Alphabet.EncodeQuery(query);
 
         List<ApproximateMatch> results = [];
 
-        Stack<EditSubTree> editTree = new();
-        editTree.Push(new(Root, 0, [], 0, edits));
-        while (editTree.TryPop(out EditSubTree subTree))
+        Stack<EditSubTree> subTrees = new();
+        subTrees.Push(new(Root, 0, [], 0, edits));
+        while (subTrees.TryPop(out EditSubTree subTree))
         {
-            (Node node, int offset, List<EditType> expandedGigar, int offsetInQuery, int editsLeft) = subTree;
-
-            if (offset > node.To - node.From) // We have reached an offset outside the length of the current edge.
+            if (subTree.OutSideEdge() || subTree.EndOfInput(Input))
             {
-                continue;
             }
-
-            if (node.From + offset == Input.Length) // We have reacted the end of the input somehow.
+            else if (subTree.Match(encodedQuery))
             {
-                continue;
+                results.AddRange(subTree.Results(Input, Alphabet, edits, results));
             }
-
-            if (offsetInQuery == encodedQuery.Length)
+            else
             {
-                List<int> matches = GetOffsetsForSubtree(node);
-                foreach (int match in matches)
-                {
-                    if (match == Input.Length - 1) // We don't want to match on the sentinel in case the input was deleted.
-                    {
-                        continue;
-                    }
-
-                    results.Add(new(match, expandedGigar.ToArray(), edits - editsLeft));
-                }
-                continue;
-            }
-
-            if (offset == node.To - node.From) // We are at the end of a line.
-            {
-                int encodedCharacter = encodedQuery[offsetInQuery];
-                if (encodedCharacter > -1 && node.Children[encodedCharacter] is { } matchingChild)
-                {
-                    editTree.Push(new(matchingChild, 1, [.. expandedGigar, EditType.Match], offsetInQuery + 1, editsLeft));
-                }
-                if (editsLeft is not 0)
-                {
-                    foreach (Node? child in node.Children)
-                    {
-                        if (child is null)
-                        {
-                            continue;
-                        }
-
-                        if (Input[child.From] is not 0) // We should not continue if this child is starting with a sentinel.
-                        {
-                            editTree.Push(new(child, 1, [.. expandedGigar, EditType.Insert], offsetInQuery, editsLeft - 1));
-                        }
-                        editTree.Push(new(child, 1, [.. expandedGigar, EditType.MisMatch], offsetInQuery + 1, editsLeft - 1));
-                    }
-                    editTree.Push(new(node, offset, [.. expandedGigar, EditType.Delete], offsetInQuery + 1, editsLeft - 1));
-                }
-            }
-            else if (Input[node.From + offset] == encodedQuery[offsetInQuery]) // We are not at the end of a line but we match.
-            {
-                editTree.Push(new(node, offset + 1, [.. expandedGigar, EditType.Match], offsetInQuery + 1, editsLeft));
-            }
-            else if (editsLeft is not 0) // We are not at the end of a line, but we don't match.
-            {
-                editTree.Push(new(node, offset + 1, [.. expandedGigar, EditType.MisMatch], offsetInQuery + 1, editsLeft - 1));
-                editTree.Push(new(node, offset + 1, [.. expandedGigar, EditType.Insert], offsetInQuery, editsLeft - 1));
-                editTree.Push(new(node, offset, [.. expandedGigar, EditType.Delete], offsetInQuery + 1, editsLeft - 1));
+                foreach(var t in subTree.NoResults(Input, encodedQuery))
+                    subTrees.Push(t);
             }
         }
 
         return results.Distinct().ToArray();
     }
 
-    private readonly record struct EditSubTree(Node node, int offset, List<EditType> expandedGigar, int offsetInQuery, int editsLeft);
-
-    private List<int> GetOffsetsForSubtree(Node node)
+    private readonly record struct EditSubTree(Node node, int offset, List<EditType> expandedGigar, int offsetInQuery, int editsLeft)
     {
-        List<int> offsets = [];
-
-        Stack<Node> nodesToVisit = new();
-        nodesToVisit.Push(node);
-
-        while (nodesToVisit.TryPop(out Node? currentNode))
+        public bool Match(int[] encodedQuery)
         {
-            if (currentNode.Label is { } label)
+            return offsetInQuery == encodedQuery.Length;
+        }
+
+        public bool EndOfInput(int[] input)
+        {
+            return node.From + offset == input.Length;
+        }
+
+        public bool OutSideEdge()
+        {
+            return offset > node.To - node.From;
+        }
+
+        public List<EditSubTree> NoResults(int[] input, int[] encodedQuery)
+        {
+            List<EditSubTree> editTree = [];
+            if (EndOfLine())
             {
-                offsets.Add(label);
+                editTree.AddRange(HandleEndofLine(input, encodedQuery));
             }
-            else
+            else if (EndOfLineNoMatch(input, encodedQuery))
             {
-                for (int i = 0; i < Alphabet.Size; i++)
-                {
-                    if (currentNode.Children.Length > i && currentNode.Children[i] is { } existingChild)
-                    {
-                        nodesToVisit.Push(existingChild);
-                    }
-                }
+                editTree.Add(HadnleEolNoMatch());
+            }
+            else if (NotEolButNoMatch()) // We are not at the end of a line, but we don't match.
+            {
+                editTree.AddRange(HandleNotEolNoMatch());
+            }
+
+            return editTree;
+        }
+
+        private IEnumerable<EditSubTree> HandleNotEolNoMatch()
+        {
+            yield return new(node, offset + 1, [.. expandedGigar, EditType.MisMatch], offsetInQuery + 1, editsLeft - 1);
+            yield return new(node, offset + 1, [.. expandedGigar, EditType.Insert], offsetInQuery, editsLeft - 1);
+            yield return new(node, offset, [.. expandedGigar, EditType.Delete], offsetInQuery + 1, editsLeft - 1);
+        }
+
+        private bool NotEolButNoMatch()
+        {
+            return editsLeft is not 0;
+        }
+
+        private EditSubTree HadnleEolNoMatch()
+        {
+            return new(node, offset + 1, [.. expandedGigar, EditType.Match], offsetInQuery + 1, editsLeft);
+        }
+
+        private bool EndOfLineNoMatch(int[] input, int[] encodedQuery)
+        {
+            return input[node.From + offset] ==
+                   encodedQuery[offsetInQuery];
+        }
+
+        private IEnumerable<EditSubTree> HandleEndofLine(int[] input, int[] encodedQuery)
+        {
+            foreach (var editSubTree in matchingChild(encodedQuery))
+            {
+                yield return editSubTree;
+            }
+
+            foreach (var editSubTree in EditsLeft(input))
+            {
+                yield return editSubTree;
             }
         }
 
-        return offsets;
+        private IEnumerable<EditSubTree> matchingChild(int[] encodedQuery)
+        {
+            int encodedCharacter = encodedQuery[offsetInQuery];
+            if (encodedCharacter > -1 && node.Children[encodedCharacter] is { } matchingChild)
+            {
+                yield return new(matchingChild, 1, [.. expandedGigar, EditType.Match], offsetInQuery + 1,
+                    editsLeft);
+            }
+        }
+
+        private IEnumerable<EditSubTree> EditsLeft(int[] input)
+        {
+            if (editsLeft is 0)
+            {
+                yield break;
+            }
+
+            foreach (Node? child in node.Children)
+            {
+                if (child is null)
+                {
+                    continue;
+                }
+
+                if (input[child.From] is not 0) // We should not continue if this child is starting with a sentinel.
+                {
+                    yield return new(child, 1, [.. expandedGigar, EditType.Insert], offsetInQuery,
+                        editsLeft - 1);
+                }
+
+                yield return new(child, 1, [.. expandedGigar, EditType.MisMatch], offsetInQuery + 1,
+                    editsLeft - 1);
+            }
+
+            yield return new(node, offset, [.. expandedGigar, EditType.Delete], offsetInQuery + 1,
+                editsLeft - 1);
+        }
+
+        private bool EndOfLine()
+        {
+            return offset == node.To - node.From;
+        }
+
+        public List<ApproximateMatch> Results(int[] input, Alphabet alphabet, int edits, List<ApproximateMatch> results)
+        {
+            List<int> matches = alphabet.GetOffsetsForSubtree(node);
+            foreach (int match in matches)
+            {
+                if (match != input.Length - 1) // We don't want to match on the sentinel in case the input was deleted.
+                {
+                    results.Add(new(match, expandedGigar.ToArray(), edits - editsLeft));
+                }
+            }
+
+            return results;
+        }
     }
 
     public string Continuation(int from, char[] breakChars, out bool previousCharIsPartOfUntil)
@@ -268,4 +297,26 @@ public class SuffixTrieSearchIndex : ISearchIndex<SuffixTrieSearchIndex>
 
         return new string(Input[from..index].Select(e => Alphabet.DecodeMap[e]).ToArray());
     }
+}
+
+public class Query
+{
+    private int[] Value { get; }
+
+    public Query(int[] value)
+    {
+        Value = value;
+    }
+
+    public bool TheEnd(int s)
+        => Value[s] == -1;
+
+    public Node GetNode(Node currentNode, int s)
+        => currentNode.Children[Value[s]];
+
+    public int Length()
+        => Value.Length;
+
+    public bool Match(int[] input, int s, int x)
+        => Value[s] == input[x];
 }
