@@ -97,7 +97,7 @@ public class SuffixTrieSearchIndex : ISearchIndex<SuffixTrieSearchIndex>
         int x = 0;
         while (s < quer.Length())
         {
-            if (currentNode.Match(x) && quer.TheEnd(s, currentNode))
+            if (currentNode.Match(x) && quer.TheEnd(s))
             {
                 return [];
             }
@@ -209,35 +209,53 @@ public class SuffixTrieSearchIndex : ISearchIndex<SuffixTrieSearchIndex>
 
         private IEnumerable<EditSubTree> HandleEndofLine(int[] input, int[] encodedQuery)
         {
+            foreach (var editSubTree in matchingChild(encodedQuery))
+            {
+                yield return editSubTree;
+            }
+
+            foreach (var editSubTree in EditsLeft(input))
+            {
+                yield return editSubTree;
+            }
+        }
+
+        private IEnumerable<EditSubTree> matchingChild(int[] encodedQuery)
+        {
             int encodedCharacter = encodedQuery[offsetInQuery];
             if (encodedCharacter > -1 && node.Children[encodedCharacter] is { } matchingChild)
             {
                 yield return new(matchingChild, 1, [.. expandedGigar, EditType.Match], offsetInQuery + 1,
                     editsLeft);
             }
+        }
 
-            if (editsLeft is not 0)
+        private IEnumerable<EditSubTree> EditsLeft(int[] input)
+        {
+            if (editsLeft is 0)
             {
-                foreach (Node? child in node.Children)
+                yield break;
+            }
+
+            foreach (Node? child in node.Children)
+            {
+                if (child is null)
                 {
-                    if (child is null)
-                    {
-                        continue;
-                    }
+                    continue;
+                }
 
-                    if (input[child.From] is not 0) // We should not continue if this child is starting with a sentinel.
-                    {
-                        yield return new(child, 1, [.. expandedGigar, EditType.Insert], offsetInQuery,
-                            editsLeft - 1);
-                    }
-
-                    yield return new(child, 1, [.. expandedGigar, EditType.MisMatch], offsetInQuery + 1,
+                if (input[child.From] is not 0) // We should not continue if this child is starting with a sentinel.
+                {
+                    yield return new(child, 1, [.. expandedGigar, EditType.Insert], offsetInQuery,
                         editsLeft - 1);
                 }
 
-                yield return new(node, offset, [.. expandedGigar, EditType.Delete], offsetInQuery + 1,
+                yield return new(child, 1, [.. expandedGigar, EditType.MisMatch], offsetInQuery + 1,
                     editsLeft - 1);
             }
+
+            yield return new(node, offset, [.. expandedGigar, EditType.Delete], offsetInQuery + 1,
+                editsLeft - 1);
         }
 
         private bool EndOfLine()
@@ -290,10 +308,10 @@ public class Query
         Value = value;
     }
 
-    public bool TheEnd(int s, Node currentNode)
-        => Value[s] == -1 || currentNode.Children[Value[s]] is null;
+    public bool TheEnd(int s)
+        => Value[s] == -1;
 
-    public Node? GetNode(Node currentNode, int s)
+    public Node GetNode(Node currentNode, int s)
         => currentNode.Children[Value[s]];
 
     public int Length()
