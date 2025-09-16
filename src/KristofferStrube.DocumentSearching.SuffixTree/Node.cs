@@ -22,4 +22,6 @@ public class Node
         Children = new Node?[alphabetSize];
         Label = label;
     }
+
+    public bool Match(int x) => x == To;
 }
